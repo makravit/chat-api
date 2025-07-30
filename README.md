@@ -6,8 +6,9 @@ This project is a REST API for an AI-powered chatbot service, built with FastAPI
 
 ## Purpose
 
+
 Enable users to:
-- Register and create an account
+- Register and create an account (data stored in a real database via SQLAlchemy)
 - Log in and obtain a JWT token
 - Send chat messages to an AI bot (authentication required)
 
@@ -18,10 +19,11 @@ See [`user-stories.md`](user-stories.md) for detailed requirements and acceptanc
 - User registration: `POST /users/register`
 - User login (JWT): `POST /users/login`
 - Authenticated chat: `POST /chat`
-- Modular, production-ready FastAPI structure
-- Pydantic for data validation
-- JWT authentication (using `python-jose`)
-- Password hashing (using `passlib[bcrypt]`)
++- Modular, production-ready FastAPI structure
++- SQLAlchemy ORM for database access (SQLite by default, configurable)
++- Pydantic for data validation
++- JWT authentication (using `python-jose`)
++- Password hashing (using `passlib[bcrypt]`)
 
 ## Project Structure
 
@@ -29,10 +31,10 @@ See [`user-stories.md`](user-stories.md) for detailed requirements and acceptanc
 app/
   main.py         # FastAPI app entrypoint
   api/            # API route definitions (users, chat)
-  models/         # Data models (in-memory user model)
+  models/         # SQLAlchemy ORM models
   schemas/        # Pydantic schemas (request/response validation)
   services/       # Business logic (user, chat)
-  core/           # Core utilities (auth, security)
+  core/           # Core utilities (auth, security, database)
 tests/            # Test suite (to be added)
 requirements.txt  # Python dependencies
 Dockerfile        # Production-ready multistage Dockerfile
@@ -41,23 +43,36 @@ user-stories.md   # User stories and acceptance criteria
 
 ## Quickstart (Local Development)
 
+
 1. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-2. Run the server:
+2. (Optional) Set the database URL (default: SQLite file `app.db`):
+   ```bash
+   export DATABASE_URL=sqlite:///./app.db
+   # Or for PostgreSQL:
+   # export DATABASE_URL=postgresql://user:password@localhost/dbname
+   ```
+3. Run the server:
    ```bash
    uvicorn app.main:app --reload
    ```
-3. Visit the interactive docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+4. Visit the interactive docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ## Running with Docker
 
-Build and run the app in a container:
+Build and run the app in a container (SQLite by default):
 
 ```bash
 docker build -t ai-chatbot-api .
 docker run -p 8000:8000 ai-chatbot-api
+```
+
+To use a different database, set the `DATABASE_URL` environment variable:
+
+```bash
+docker run -e DATABASE_URL=postgresql://user:password@host/dbname -p 8000:8000 ai-chatbot-api
 ```
 
 ## API Overview
@@ -82,12 +97,13 @@ See the OpenAPI docs at `/docs` for full details and try out the endpoints inter
 
 ## Requirements
 
-- Python 3.8+
-- FastAPI
-- Uvicorn
-- passlib[bcrypt]
-- python-jose
-- pydantic
++- Python 3.8+
++- FastAPI
++- Uvicorn
++- SQLAlchemy
++- passlib[bcrypt]
++- python-jose
++- pydantic
 
 ## License
 

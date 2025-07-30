@@ -1,10 +1,13 @@
-from pydantic import BaseModel, constr, validator
+
+from pydantic import BaseModel, field_validator
+
 
 
 class ChatRequest(BaseModel):
     message: str
 
-    @validator('message')
+    @field_validator('message')
+    @classmethod
     def not_empty(cls, v):
         v = v.strip()
         if not v:
