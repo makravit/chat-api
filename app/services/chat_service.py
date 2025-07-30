@@ -3,7 +3,8 @@ from app.schemas.chat import ChatRequest, ChatResponse
 
 # Dummy AI bot logic
 
-def process_chat(request: ChatRequest, user):
+def process_chat(request: ChatRequest, user) -> ChatResponse:
+    """Process a chat request and return a bot response."""
     # Pydantic already validates message content and length
     message = request.message.strip()
     # Simulate bot response

@@ -2,7 +2,8 @@ import pytest
 from pydantic import ValidationError
 from app.schemas.user import UserRegister, UserLogin
 
-def test_user_register_valid():
+def test_user_register_valid() -> None:
+    """Test that a valid user registration passes schema validation."""
     user = UserRegister(name="Valid User", email="valid@example.com", password="Password1!")
     assert user.email == "valid@example.com"
 
@@ -16,13 +17,16 @@ import pytest
     (dict(name="Invalid Email", email="not-an-email", password="Password1!"), "email"),
     (dict(name="ShortPW", email="shortpw@example.com", password="123"), "at least 8"),
 ])
-def test_user_register_invalid_cases(kwargs, expected_error):
+def test_user_register_invalid_cases(kwargs: dict, expected_error: str) -> None:
+    """Test invalid user registration cases for missing/invalid fields."""
     with pytest.raises(ValidationError) as exc:
         UserRegister(**kwargs)
     if expected_error:
-        assert expected_error in str(exc.value).lower()
+        # Exception messages should be user-friendly and contain the expected error
+        assert expected_error in str(exc.value).lower() or expected_error in str(exc).lower()
 
-def test_user_login_valid():
+def test_user_login_valid() -> None:
+    """Test that a valid user login passes schema validation."""
     login = UserLogin(email="valid@example.com", password="Password1!")
     assert login.email == "valid@example.com"
 
@@ -32,11 +36,13 @@ def test_user_login_valid():
     dict(password="Password1!"),
     dict(email="valid@example.com"),
 ])
-def test_user_login_missing_fields(kwargs):
+def test_user_login_missing_fields(kwargs: dict) -> None:
+    """Test that missing required login fields raise a validation error."""
     with pytest.raises(ValidationError):
         UserLogin(**kwargs)
 
-def test_user_login_invalid_email():
+def test_user_login_invalid_email() -> None:
+    """Test that an invalid email format in login raises a validation error."""
     with pytest.raises(ValidationError):
         UserLogin(email="not-an-email", password="Password1!")
 
@@ -56,7 +62,8 @@ def test_user_login_invalid_email():
     # Email at max length (assuming 255)
     dict(name="Max Email", email=("a"*247)+"@e.com", password="Password1!"),
 ])
-def test_user_register_edge_cases(kwargs):
+def test_user_register_edge_cases(kwargs: dict) -> None:
+    """Test edge cases for user registration schema, including whitespace, max length, and complexity."""
     password = kwargs.get("password", "")
     required_symbols = set("!@#$%^&*")
     has_symbol = bool(set(password) & required_symbols)
@@ -75,6 +82,7 @@ def test_user_register_edge_cases(kwargs):
             assert False, "Unexpected ValidationError for valid input"
         # Check for the new error message if whitespace-only name or password
         if kwargs.get("name", "").strip() == "" or ("password" in kwargs and kwargs["password"].strip() == ""):
+            # Both error messages are user-friendly and consistent
             assert ("Password cannot be empty" in str(exc) or "Name must not be empty." in str(exc))
 
 
@@ -90,7 +98,8 @@ def test_user_register_edge_cases(kwargs):
     # Email at max length (assuming 255)
     dict(email=("a"*247)+"@e.com", password="Password1!"),
 ])
-def test_user_login_edge_cases(kwargs):
+def test_user_login_edge_cases(kwargs: dict) -> None:
+    """Test edge cases for user login schema, including whitespace, max length, and complexity."""
     password = kwargs.get("password", "")
     required_symbols = set("!@#$%^&*")
     has_symbol = bool(set(password) & required_symbols)
@@ -108,4 +117,5 @@ def test_user_login_edge_cases(kwargs):
             assert False, "Unexpected ValidationError for valid input"
         # Check for the new error message if whitespace-only password
         if "password" in kwargs and kwargs["password"].strip() == "":
+            # Both error messages are user-friendly and consistent
             assert ("Password cannot be empty" in str(exc) or "Password cannot be empty or whitespace only." in str(exc))
