@@ -2,16 +2,8 @@
 from sqlalchemy.orm import Session
 
 
-class EmailAlreadyRegistered(Exception):
-    """Exception raised when attempting to register an email that already exists."""
-    def __init__(self, message: str = "Email is already registered."):
-        super().__init__(message)
 
-
-class InvalidCredentials(Exception):
-    """Exception raised for invalid login credentials."""
-    def __init__(self, message: str = "Email or password incorrect."):
-        super().__init__(message)
+from app.core.exceptions import AppException, EmailAlreadyRegistered, InvalidCredentials
 
 from app.models.user import User
 from app.core.auth import hash_password, verify_password, create_access_token

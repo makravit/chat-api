@@ -1,12 +1,18 @@
 
-from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi import APIRouter, status, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.schemas.user import UserRegister, UserLogin, UserResponse, TokenResponse
-from app.services.user_service import register_user, authenticate_user, EmailAlreadyRegistered, InvalidCredentials
+from app.services.user_service import register_user, authenticate_user, EmailAlreadyRegistered, InvalidCredentials, AppException
 from app.core.database import get_db
 
+
 router = APIRouter()
+
+
+# Register the exception handler for AppException
+from app.core.exception_handlers import app_exception_handler
+router.add_exception_handler(AppException, app_exception_handler)
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(user: UserRegister, db: Session = Depends(get_db)):
