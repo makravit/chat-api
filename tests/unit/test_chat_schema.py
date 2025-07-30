@@ -1,6 +1,8 @@
+
 import pytest
-from app.schemas.chat import ChatRequest
 from pydantic import ValidationError
+
+from app.schemas.chat import ChatRequest
 
 def test_chat_request_valid():
     req = ChatRequest(message="Hello!")

@@ -1,15 +1,14 @@
 
 import pytest
+from unittest.mock import Mock
 from pydantic import ValidationError
+
 from app.services.chat_service import process_chat
 from app.schemas.chat import ChatRequest
 
-class DummyUser:
-    pass
-
 def test_process_chat_happy():
     req = ChatRequest(message="Hello!")
-    user = DummyUser()
+    user = Mock()
     resp = process_chat(req, user)
     assert "Hello" in resp.response or "help" in resp.response
 

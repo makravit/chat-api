@@ -1,8 +1,8 @@
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
 import os
 import contextlib
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://chatbot:chatbotpass@db:5432/chatbotdb")

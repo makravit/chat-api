@@ -1,4 +1,6 @@
+
 from fastapi import APIRouter, Depends
+
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.chat_service import process_chat
 from app.core.auth import get_current_user

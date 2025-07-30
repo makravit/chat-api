@@ -1,5 +1,4 @@
 
-# SQLAlchemy ORM User model for PostgreSQL
 from sqlalchemy import Column, Integer, String
 from app.core.database import Base
 

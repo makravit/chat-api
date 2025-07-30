@@ -1,11 +1,15 @@
+
+import os
+from typing import Optional
+from datetime import datetime, timedelta
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from typing import Optional
+
 from app.models.user import User
 from app.core.database import get_db
-import os
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "secret-key")
 ALGORITHM = "HS256"
@@ -19,7 +23,6 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 def create_access_token(data: dict) -> str:
-    from datetime import datetime, timedelta
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(hours=1)
     to_encode.update({"exp": expire})

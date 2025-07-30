@@ -1,10 +1,10 @@
 
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
 
 from app.schemas.user import UserRegister, UserLogin, UserResponse, TokenResponse
 from app.core.auth import hash_password, verify_password, create_access_token
 from app.services.user_repository import UserRepository
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
 
 
 def register_user(user: UserRegister, db: Session):

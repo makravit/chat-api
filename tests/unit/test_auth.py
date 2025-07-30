@@ -1,7 +1,9 @@
-import pytest
-from app.core.auth import hash_password, verify_password, create_access_token
-from jose import jwt
+
 import os
+import pytest
+from jose import jwt
+
+from app.core.auth import hash_password, verify_password, create_access_token
 
 SECRET_KEY = os.getenv("SECRET_KEY", "secret-key")
 ALGORITHM = "HS256"
