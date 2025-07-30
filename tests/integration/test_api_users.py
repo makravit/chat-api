@@ -103,7 +103,8 @@ def test_register_duplicate_email(client):
         "email": "dupemail@example.com",
         "password": "Password1!"
     })
-    assert resp2.status_code in (400, 409)
+    assert resp2.status_code == 409
+    assert "already registered" in resp2.json()["detail"].lower()
 
 def test_register_duplicate_username(client):
     # Register first user
@@ -145,8 +146,8 @@ def test_login_unregistered_email(client):
         "email": "doesnotexist@example.com",
         "password": "Password1!"
     })
-    assert resp.status_code == 401 or resp.status_code == 400
-    assert "not found" in resp.json().get("detail", "").lower() or "incorrect" in resp.json().get("detail", "").lower()
+    assert resp.status_code == 401
+    assert "incorrect" in resp.json().get("detail", "").lower()
 
 def test_register_password_complexity(client):
     resp = client.post("/users/register", json={
