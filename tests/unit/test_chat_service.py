@@ -12,12 +12,10 @@ def test_process_chat_happy():
     resp = process_chat(req, user)
     assert "Hello" in resp.response or "help" in resp.response
 
-
 def test_process_chat_empty():
     with pytest.raises(ValidationError) as exc:
         ChatRequest(message="   ")
     assert "empty" in str(exc.value)
-
 
 def test_process_chat_too_long():
     with pytest.raises(ValidationError) as exc:

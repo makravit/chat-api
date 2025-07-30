@@ -1,6 +1,3 @@
-
-import pytest
-
 from app.core.database import get_db
 
 def test_get_db_returns_session():

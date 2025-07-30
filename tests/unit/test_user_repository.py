@@ -3,7 +3,6 @@ from unittest.mock import MagicMock
 from app.models.user import User
 from app.services.user_repository import UserRepository
 
-
 def make_db_with_users(users=None):
     db = MagicMock()
     db.users = users or []
@@ -23,7 +22,6 @@ def make_db_with_users(users=None):
     db.committed = False
     return db
 
-
 def test_get_by_email_found():
     user = User(id=1, name="Test", email="test@example.com", hashed_password="x")
     db = make_db_with_users([user])
@@ -31,13 +29,11 @@ def test_get_by_email_found():
     result = repo.get_by_email("test@example.com")
     assert result is user
 
-
 def test_get_by_email_not_found():
     db = make_db_with_users([])
     repo = UserRepository(db)
     result = repo.get_by_email("notfound@example.com")
     assert result is None
-
 
 def test_create_user():
     db = make_db_with_users([])
