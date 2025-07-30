@@ -7,7 +7,8 @@
   "postCreateCommand": "pip install -r requirements.txt && pip install pytest pytest-cov httpx[http2] psycopg2-binary",
   "forwardPorts": [8000, 5432],
   "containerEnv": {
-    "DATABASE_URL": "postgresql://chatbot:chatbotpass@db:5432/chatbotdb"
+    "DATABASE_URL": "postgresql://chatbot:chatbotpass@db:5432/chatbotdb",
+    "TEST_DATABASE_URL": "postgresql://chatbot:chatbotpass@db:5432/chatbotdb_test"
   },
   "runArgs": ["--network=host"]
 }

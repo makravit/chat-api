@@ -2,6 +2,7 @@ import pytest
 from fastapi import status
 from app.schemas.user import UserRegister, UserLogin
 
+
 def test_register_and_login(client):
     # Register
     resp = client.post("/users/register", json={
@@ -43,3 +44,38 @@ def test_register_and_login(client):
         "email": "testuser@example.com"
     })
     assert resp5.status_code == 422
+
+def test_register_empty_name(client):
+    resp = client.post("/users/register", json={
+        "name": " ",
+        "email": "emptyname@example.com",
+        "password": "Password1!"
+    })
+    assert resp.status_code == 422
+    assert any("empty" in err["msg"].lower() for err in resp.json()["detail"])
+
+def test_register_short_password(client):
+    resp = client.post("/users/register", json={
+        "name": "Short Pass",
+        "email": "shortpass@example.com",
+        "password": "Short1!"
+    })
+    assert resp.status_code == 422
+    assert any("at least 8" in err["msg"].lower() for err in resp.json()["detail"])
+
+def test_register_password_complexity(client):
+    resp = client.post("/users/register", json={
+        "name": "NoComplex",
+        "email": "nocomplex@example.com",
+        "password": "password123"
+    })
+    assert resp.status_code == 422
+    assert any("must contain" in err["msg"].lower() for err in resp.json()["detail"])
+
+def test_login_empty_password(client):
+    resp = client.post("/users/login", json={
+        "email": "testuser@example.com",
+        "password": ""
+    })
+    assert resp.status_code == 422
+    assert any("empty" in err["msg"].lower() for err in resp.json()["detail"])
