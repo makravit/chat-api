@@ -1,4 +1,68 @@
 import pytest
+
+# Additional tests for case sensitivity, password edge cases, name/email edge cases, and tricky invalid emails
+@pytest.mark.parametrize("email", [
+    "USER@EXAMPLE.COM",
+    "user@EXAMPLE.com",
+    "User@Example.Com"
+])
+def test_user_register_email_case_insensitive(email: str) -> None:
+    """Test that email validation is case-insensitive."""
+    user = UserRegister(name="Case", email=email, password="Password1!")
+    assert user.email.lower() == email.lower()
+
+@pytest.mark.parametrize("password,should_error", [
+    ("!!!!!!!!", True),  # only symbols
+    ("12345678", True),  # only numbers
+    ("abcdefgh", True),  # only letters
+    ("A1!", True),       # too short
+    ("A1!aaaaa", False), # valid, min length
+    ("A1!aaaaaa", False), # valid, above min length
+])
+def test_user_register_password_edge_cases(password: str, should_error: bool) -> None:
+    """Test password edge cases for complexity and length."""
+    kwargs = dict(name="Edge", email="edge@example.com", password=password)
+    if should_error:
+        with pytest.raises(ValidationError):
+            UserRegister(**kwargs)
+    else:
+        user = UserRegister(**kwargs)
+        assert user.password == password
+
+@pytest.mark.parametrize("name,should_error", [
+    ("  John  ", False),  # leading/trailing whitespace
+    ("José", False),      # unicode
+    ("O'Connor", False),  # special char
+    ("   ", True),        # whitespace only
+])
+def test_user_register_name_edge_cases(name: str, should_error: bool) -> None:
+    """Test name field with whitespace, unicode, and special characters."""
+    kwargs = dict(name=name, email="namecase@example.com", password="Password1!")
+    if should_error:
+        with pytest.raises(ValidationError):
+            UserRegister(**kwargs)
+    else:
+        user = UserRegister(**kwargs)
+        assert user.name.strip() == name.strip()
+
+@pytest.mark.parametrize("email,should_error", [
+    ("  user@example.com  ", False),  # leading/trailing whitespace is accepted by Pydantic
+    ("user@@example.com", True),     # double @
+    ("user@.com", True),             # invalid domain
+    ("user@example.com", False),     # valid
+])
+def test_user_register_email_edge_cases(email: str, should_error: bool) -> None:
+    """Test email field with whitespace and tricky invalid emails."""
+    kwargs = dict(name="Email", email=email, password="Password1!")
+    if should_error:
+        with pytest.raises(ValidationError):
+            UserRegister(**kwargs)
+    else:
+        user = UserRegister(**kwargs)
+        assert user.email == email.strip()
+
+
+import pytest
 from pydantic import ValidationError
 from app.schemas.user import UserRegister, UserLogin
 
@@ -8,7 +72,6 @@ def test_user_register_valid() -> None:
     assert user.email == "valid@example.com"
 
 
-import pytest
 
 @pytest.mark.parametrize("kwargs,expected_error", [
     (dict(email="missingname@example.com", password="Password1!"), None),
@@ -30,8 +93,6 @@ def test_user_login_valid() -> None:
     login = UserLogin(email="valid@example.com", password="Password1!")
     assert login.email == "valid@example.com"
 
-
-
 @pytest.mark.parametrize("kwargs", [
     dict(password="Password1!"),
     dict(email="valid@example.com"),
@@ -45,7 +106,6 @@ def test_user_login_invalid_email() -> None:
     """Test that an invalid email format in login raises a validation error."""
     with pytest.raises(ValidationError):
         UserLogin(email="not-an-email", password="Password1!")
-
 
 # Additional tests for registration and login edge cases
 @pytest.mark.parametrize("kwargs", [
@@ -84,7 +144,6 @@ def test_user_register_edge_cases(kwargs: dict) -> None:
         if kwargs.get("name", "").strip() == "" or ("password" in kwargs and kwargs["password"].strip() == ""):
             # Both error messages are user-friendly and consistent
             assert ("Password cannot be empty" in str(exc) or "Name must not be empty." in str(exc))
-
 
 @pytest.mark.parametrize("kwargs", [
     # Extra/unexpected field
