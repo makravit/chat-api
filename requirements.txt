@@ -1,7 +1,14 @@
-fastapi
-uvicorn
-python-jose
-passlib[bcrypt]
-pydantic
-sqlalchemy
-psycopg2-binary
+fastapi                # Web framework
+uvicorn                # ASGI server for FastAPI
+python-jose            # JWT authentication
+passlib[bcrypt]        # Password hashing
+pydantic[email]        # Data validation (with email support)
+sqlalchemy             # ORM
+psycopg2-binary        # PostgreSQL driver
+starlette              # FastAPI dependency (explicit for clarity)
+typing-extensions      # Typing support for Python <3.12
+
+# Testing dependencies
+pytest                 # Test runner
+pytest-cov             # Coverage reporting
+httpx                  # Async HTTP client for testing
