@@ -48,11 +48,11 @@ user-stories.md   # User stories and acceptance criteria
    ```bash
    pip install -r requirements.txt
    ```
-2. (Optional) Set the database URL (default: SQLite file `app.db`):
+
+
+2. Set the database URL (PostgreSQL only):
    ```bash
-   export DATABASE_URL=sqlite:///./app.db
-   # Or for PostgreSQL:
-   # export DATABASE_URL=postgresql://user:password@localhost/dbname
+   export DATABASE_URL=postgresql://chatbot:chatbotpass@localhost:5432/chatbotdb
    ```
 3. Run the server:
    ```bash
@@ -60,20 +60,20 @@ user-stories.md   # User stories and acceptance criteria
    ```
 4. Visit the interactive docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-## Running with Docker
+## Running with Docker Compose (Recommended)
 
-Build and run the app in a container (SQLite by default):
-
-```bash
-docker build -t ai-chatbot-api .
-docker run -p 8000:8000 ai-chatbot-api
-```
-
-To use a different database, set the `DATABASE_URL` environment variable:
+The included `docker-compose.yml` will run both the FastAPI app and a PostgreSQL database for local development and production.
 
 ```bash
-docker run -e DATABASE_URL=postgresql://user:password@host/dbname -p 8000:8000 ai-chatbot-api
+docker compose up --build
 ```
+
+This will:
+- Start a PostgreSQL 15 database (user: `chatbot`, password: `chatbotpass`, db: `chatbotdb`)
+- Start the FastAPI app, automatically connected to the database
+- Expose the API at [http://localhost:8000](http://localhost:8000)
+
+You can change database credentials in `docker-compose.yml` as needed. **SQLite is not supported.**
 
 ## API Overview
 
@@ -104,6 +104,7 @@ See the OpenAPI docs at `/docs` for full details and try out the endpoints inter
 +- passlib[bcrypt]
 +- python-jose
 +- pydantic
++- psycopg2-binary (for PostgreSQL)
 
 ## License
 
