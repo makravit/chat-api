@@ -49,29 +49,21 @@ def test_chat_token_nonexistent_user(client, monkeypatch):
     assert resp.status_code == 401
     assert resp.json()["detail"] == "Authentication required. Please log in or register."
 
-def test_chat_empty_message(client):
-    token = get_token(client)
-    resp = client.post("/chat", json={"message": "   "}, headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 422
-    # Pydantic validation error message is in 'detail' list
-    assert any("empty" in err["msg"].lower() for err in resp.json()["detail"])
 
-def test_chat_too_long(client):
-    token = get_token(client)
-    long_message = "a" * 4097
-    resp = client.post("/chat", json={"message": long_message}, headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 422
-    assert any("too long" in err["msg"].lower() for err in resp.json()["detail"])
+import pytest
 
-def test_chat_missing_message_field(client):
+@pytest.mark.parametrize("payload,expected_error", [
+    ( {"message": "   "}, "empty" ),
+    ( {"message": "a" * 4097}, "too long" ),
+    ( {}, None ),
+    ( {"message": 12345}, None ),
+])
+def test_chat_invalid_cases(client, payload, expected_error):
     token = get_token(client)
-    resp = client.post("/chat", json={}, headers={"Authorization": f"Bearer {token}"})
+    resp = client.post("/chat", json=payload, headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 422
-
-def test_chat_message_not_string(client):
-    token = get_token(client)
-    resp = client.post("/chat", json={"message": 12345}, headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 422
+    if expected_error:
+        assert any(expected_error in err["msg"].lower() for err in resp.json().get("detail", []))
 
 # Simulate service/database error by monkeypatching the chat service (example, adjust as needed)
 def test_chat_service_exception(client, monkeypatch):
