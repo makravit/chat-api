@@ -3,7 +3,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
+
+from app.services.user_service import EmailAlreadyRegistered, InvalidCredentials
 
 from app.core.auth import hash_password
 from app.schemas.user import UserRegister, UserLogin
@@ -23,10 +24,8 @@ def test_register_user_duplicate():
     repo_mock = MagicMock()
     repo_mock.get_by_email.return_value = MagicMock()
     with patch("app.services.user_service.UserRepository", return_value=repo_mock):
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(EmailAlreadyRegistered):
             register_user(user, MagicMock())
-    assert exc.value.status_code == 400
-    assert "already registered" in exc.value.detail
 
 def test_authenticate_user_success():
     login = UserLogin(email="test@example.com", password="Password1!")
@@ -43,17 +42,14 @@ def test_authenticate_user_wrong_password():
     repo_mock = MagicMock()
     repo_mock.get_by_email.return_value = db_user
     with patch("app.services.user_service.UserRepository", return_value=repo_mock):
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(InvalidCredentials):
             authenticate_user(login, MagicMock())
-    assert exc.value.status_code == 401
-    assert "incorrect" in exc.value.detail
 
 def test_authenticate_user_not_found():
     login = UserLogin(email="notfound@example.com", password="Password1!")
     repo_mock = MagicMock()
     repo_mock.get_by_email.return_value = None
     with patch("app.services.user_service.UserRepository", return_value=repo_mock):
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(InvalidCredentials):
             authenticate_user(login, MagicMock())
-    assert exc.value.status_code == 401
 
