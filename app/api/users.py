@@ -11,13 +11,15 @@ router = APIRouter()
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(user: UserRegister, db: Session = Depends(get_db)):
     try:
-        return register_user(user, db)
+        new_user = register_user(user.name, user.email, user.password, db)
+        return UserResponse(id=new_user.id, name=new_user.name, email=new_user.email)
     except EmailAlreadyRegistered:
         raise HTTPException(status_code=409, detail="Email is already registered.")
 
 @router.post("/login", response_model=TokenResponse)
 def login(user: UserLogin, db: Session = Depends(get_db)):
     try:
-        return authenticate_user(user, db)
+        token = authenticate_user(user.email, user.password, db)
+        return TokenResponse(access_token=token)
     except InvalidCredentials:
         raise HTTPException(status_code=401, detail="Email or password incorrect.")
