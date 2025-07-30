@@ -1,7 +1,5 @@
-from app.schemas.chat import ChatRequest, ChatResponse
-from fastapi import HTTPException, status
 
-MAX_MESSAGE_LENGTH = 4096
+from app.schemas.chat import ChatRequest, ChatResponse
 
 # Dummy AI bot logic
 
