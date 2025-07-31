@@ -17,10 +17,6 @@ app = FastAPI(title="AI Chatbot API", description="A REST API for user registrat
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
 
-
-
-
-
 # API Versioning: business endpoints are under /api/v1, health check is unversioned at /health
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(chat.router, prefix="/api/v1", tags=["chat"])

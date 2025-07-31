@@ -33,7 +33,6 @@ class UserRegister(BaseModel):
             raise ValueError("Password must contain letters, numbers, and at least one symbol (!@#$%^&*)")
         return v
 
-
 class UserLogin(BaseModel):
     """Schema for user login input."""
     email: EmailStr

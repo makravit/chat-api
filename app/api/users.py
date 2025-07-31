@@ -11,12 +11,7 @@ from app.services.user_service import register_user, authenticate_user, EmailAlr
 from app.core.logging import logger
 from app.core.database import get_db
 
-
 router = APIRouter()
-
-
-
-
 
 @router.post(
     "/register",

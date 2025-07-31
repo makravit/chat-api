@@ -1,3 +1,12 @@
+
+# Standard library imports
+
+# Third-party imports
+from fastapi.testclient import TestClient
+
+# Local application imports
+from app.main import app
+
 def test_liveness():
     client = TestClient(app)
     response = client.get("/live")
@@ -9,17 +18,6 @@ def test_readiness_ok():
     response = client.get("/ready")
     assert response.status_code == 200
     assert response.json() == {"status": "ready"}
-
-# Standard library imports
-
-# Third-party imports
-from fastapi.testclient import TestClient
-from sqlalchemy.exc import SQLAlchemyError
-
-# Local application imports
-from app.main import app
-from app.api import health
-
 
 def test_health_check_ok():
     client = TestClient(app)

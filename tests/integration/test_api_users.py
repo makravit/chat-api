@@ -50,28 +50,6 @@ def registered_user(client, user_data):
     client.post("/api/v1/users/register", json=user_data)
     return user_data
 
-    resp = client.post("/api/v1/users/register", json={
-        "name": "Test User",
-        "email": "testuser@example.com",
-        "password": "Password1!"
-    })
-    assert resp.status_code == status.HTTP_201_CREATED
-    data = resp.json()
-    assert data["email"] == "testuser@example.com"
-
-    user = {
-        "name": "Test User",
-        "email": "testlogin@example.com",
-        "password": "Password1!"
-    }
-    client.post("/api/v1/users/register", json=user)
-    resp = client.post("/api/v1/users/login", json={
-        "email": user["email"],
-        "password": user["password"]
-    })
-    assert resp.status_code == 200
-    assert "access_token" in resp.json()
-
 def test_login_wrong_password(client):
     user = {
         "name": "Test User",

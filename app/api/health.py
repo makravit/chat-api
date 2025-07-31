@@ -13,7 +13,6 @@ from app.core.database import get_db
 
 router = APIRouter()
 
-
 @router.get("/live", tags=["Health"])
 def liveness_probe():
     """Liveness probe: returns 200 if app is running."""

@@ -2,6 +2,7 @@
 # Standard library imports
 
 # Third-party imports
+import pytest
 
 # Local application imports
 from app.core.auth import create_access_token
@@ -54,9 +55,6 @@ def test_chat_token_nonexistent_user(client, monkeypatch):
     resp = client.post("/api/v1/chat", json={"message": "Hello!"}, headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 401
     assert resp.json()["detail"] == "Authentication required. Please log in or register."
-
-
-import pytest
 
 @pytest.mark.parametrize("payload,expected_error", [
     ( {"message": "   "}, "empty" ),
