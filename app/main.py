@@ -1,5 +1,10 @@
 
+# Standard library imports
+
+# Third-party imports
 from fastapi import FastAPI
+
+# Local application imports
 from app.api import users, chat, health
 from app.core.database import Base, engine
 from app.core.exception_handlers import app_exception_handler

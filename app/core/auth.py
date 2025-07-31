@@ -1,12 +1,15 @@
 
+# Standard library imports
 from typing import Optional
 from datetime import datetime, timedelta
 
+# Third-party imports
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
+# Local application imports
 from app.models.user import User
 from app.core.database import get_db
 from app.core.config import settings

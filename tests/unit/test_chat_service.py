@@ -1,8 +1,12 @@
 
-import pytest
+# Standard library imports
 from unittest.mock import Mock
+
+# Third-party imports
+import pytest
 from pydantic import ValidationError
 
+# Local application imports
 from app.services.chat_service import process_chat
 from app.schemas.chat import ChatRequest
 

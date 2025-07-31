@@ -1,5 +1,10 @@
 
+# Standard library imports
+
+# Third-party imports
 from sqlalchemy import Column, Integer, String
+
+# Local application imports
 from app.core.database import Base
 
 class User(Base):

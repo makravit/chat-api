@@ -1,6 +1,5 @@
-"""
-Custom exception hierarchy for application/service errors.
-"""
+
+# No imports needed; custom exception hierarchy for application/service errors.
 
 class AppException(Exception):
     """Base exception for all application/service errors."""

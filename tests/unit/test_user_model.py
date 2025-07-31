@@ -1,3 +1,9 @@
+
+# Standard library imports
+
+# Third-party imports
+
+# Local application imports
 from app.models.user import User
 
 def test_user_model_fields():

@@ -1,5 +1,11 @@
 
+
+# Standard library imports
+
+# Third-party imports
 from pydantic import BaseModel, field_validator
+
+# Local application imports
 
 class ChatRequest(BaseModel):
     message: str

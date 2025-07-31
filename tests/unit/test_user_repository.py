@@ -1,5 +1,10 @@
 
+# Standard library imports
 from unittest.mock import MagicMock
+
+# Third-party imports
+
+# Local application imports
 from app.models.user import User
 from app.services.user_repository import UserRepository
 

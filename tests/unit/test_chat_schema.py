@@ -1,7 +1,11 @@
 
+# Standard library imports
+
+# Third-party imports
 import pytest
 from pydantic import ValidationError
 
+# Local application imports
 from app.schemas.chat import ChatRequest
 
 def test_chat_request_valid():

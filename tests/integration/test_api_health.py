@@ -1,8 +1,13 @@
 
+# Standard library imports
+
+# Third-party imports
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import SQLAlchemyError
+
+# Local application imports
 from app.main import app
 from app.api import health
-from sqlalchemy.exc import SQLAlchemyError
 
 
 def test_health_check_ok():

@@ -1,4 +1,10 @@
+
+# Standard library imports
+
+# Third-party imports
 import pytest
+
+# Local application imports
 
 # Additional tests for case sensitivity, password edge cases, name/email edge cases, and tricky invalid emails
 @pytest.mark.parametrize("email", [

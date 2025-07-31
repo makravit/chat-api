@@ -1,9 +1,14 @@
 
+# Standard library imports
+from typing import Any
+
+# Third-party imports
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
+
+# Local application imports
 from app.core.exceptions import AppException, EmailAlreadyRegistered, InvalidCredentials
 from app.core.logging import logger
-from typing import Any
 
 async def app_exception_handler(request: Request, exc: AppException) -> Response:
     # Map specific exceptions to status codes

@@ -1,4 +1,10 @@
+
+# Standard library imports
+
+# Third-party imports
 import structlog
+
+# Local application imports
 from app.core.config import settings
 
 # Map string log level to structlog/stdlib level

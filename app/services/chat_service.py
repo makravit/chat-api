@@ -1,4 +1,9 @@
 
+# Standard library imports
+
+# Third-party imports
+
+# Local application imports
 from app.schemas.chat import ChatRequest, ChatResponse
 
 # Dummy AI bot logic

@@ -1,5 +1,11 @@
+
+# Standard library imports
+
+# Third-party imports
 import pytest
 from fastapi import status
+
+# Local application imports
 
 def test_register_duplicate_email(client, user_data):
     """Registering the same email twice should return 409."""
