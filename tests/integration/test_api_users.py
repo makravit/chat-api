@@ -9,16 +9,16 @@ from fastapi import status
 
 def test_register_duplicate_email(client, user_data):
     """Registering the same email twice should return 409."""
-    resp1 = client.post("/users/register", json=user_data)
+    resp1 = client.post("/api/v1/users/register", json=user_data)
     assert resp1.status_code == 201
-    resp2 = client.post("/users/register", json=user_data)
+    resp2 = client.post("/api/v1/users/register", json=user_data)
     assert resp2.status_code == 409
     assert "already registered" in resp2.json()["detail"].lower()
 
 def test_login_token_response_structure(client, user_data):
     """Login returns a valid token structure."""
-    client.post("/users/register", json=user_data)
-    resp = client.post("/users/login", json={"email": user_data["email"], "password": user_data["password"]})
+    client.post("/api/v1/users/register", json=user_data)
+    resp = client.post("/api/v1/users/login", json={"email": user_data["email"], "password": user_data["password"]})
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data and isinstance(data["access_token"], str)
@@ -26,14 +26,14 @@ def test_login_token_response_structure(client, user_data):
 
 def test_password_not_in_register_response(client, user_data):
     """Password is never returned in the register API response."""
-    reg = client.post("/users/register", json=user_data)
+    reg = client.post("/api/v1/users/register", json=user_data)
     assert reg.status_code == 201
     assert "password" not in reg.json()
 
 def test_password_not_in_login_response(client, user_data):
     """Password is never returned in the login API response."""
-    client.post("/users/register", json=user_data)
-    login = client.post("/users/login", json={"email": user_data["email"], "password": user_data["password"]})
+    client.post("/api/v1/users/register", json=user_data)
+    login = client.post("/api/v1/users/login", json={"email": user_data["email"], "password": user_data["password"]})
     assert login.status_code == 200
     assert "password" not in login.json()
 
@@ -47,11 +47,10 @@ def user_data():
 
 @pytest.fixture
 def registered_user(client, user_data):
-    client.post("/users/register", json=user_data)
+    client.post("/api/v1/users/register", json=user_data)
     return user_data
 
-def test_register_valid(client):
-    resp = client.post("/users/register", json={
+    resp = client.post("/api/v1/users/register", json={
         "name": "Test User",
         "email": "testuser@example.com",
         "password": "Password1!"
@@ -60,14 +59,13 @@ def test_register_valid(client):
     data = resp.json()
     assert data["email"] == "testuser@example.com"
 
-def test_login_valid(client):
     user = {
         "name": "Test User",
         "email": "testlogin@example.com",
         "password": "Password1!"
     }
-    client.post("/users/register", json=user)
-    resp = client.post("/users/login", json={
+    client.post("/api/v1/users/register", json=user)
+    resp = client.post("/api/v1/users/login", json={
         "email": user["email"],
         "password": user["password"]
     })
@@ -80,8 +78,8 @@ def test_login_wrong_password(client):
         "email": "testwrongpass@example.com",
         "password": "Password1!"
     }
-    client.post("/users/register", json=user)
-    resp = client.post("/users/login", json={
+    client.post("/api/v1/users/register", json=user)
+    resp = client.post("/api/v1/users/login", json={
         "email": user["email"],
         "password": "WrongPass1!"
     })
@@ -97,12 +95,13 @@ def test_login_wrong_password(client):
 ])
 def test_register_invalid_cases(client, payload, expected_error):
     resp = client.post("/users/register", json=payload)
+    resp = client.post("/api/v1/users/register", json=payload)
     assert resp.status_code == 422
     if expected_error:
         assert any(expected_error in err["msg"].lower() for err in resp.json().get("detail", []))
 
 def test_register_invalid_email(client):
-    resp = client.post("/users/register", json={
+    resp = client.post("/api/v1/users/register", json={
         "name": "Invalid Email",
         "email": "not-an-email",
         "password": "Password1!"
@@ -112,14 +111,14 @@ def test_register_invalid_email(client):
 
 def test_register_duplicate_email(client):
     # Register first user
-    resp = client.post("/users/register", json={
+    resp = client.post("/api/v1/users/register", json={
         "name": "DupEmail",
         "email": "dupemail@example.com",
         "password": "Password1!"
     })
     assert resp.status_code == 201
     # Register with same email, different name
-    resp2 = client.post("/users/register", json={
+    resp2 = client.post("/api/v1/users/register", json={
         "name": "DupEmail2",
         "email": "dupemail@example.com",
         "password": "Password1!"
@@ -129,14 +128,14 @@ def test_register_duplicate_email(client):
 
 def test_register_duplicate_username(client):
     # Register first user
-    resp = client.post("/users/register", json={
+    resp = client.post("/api/v1/users/register", json={
         "name": "DupUser",
         "email": "dupuser1@example.com",
         "password": "Password1!"
     })
     assert resp.status_code == 201
     # Register with same name but different email (should succeed, as only email is unique)
-    resp2 = client.post("/users/register", json={
+    resp2 = client.post("/api/v1/users/register", json={
         "name": "DupUser",
         "email": "dupuser2@example.com",
         "password": "Password1!"
@@ -145,25 +144,25 @@ def test_register_duplicate_username(client):
 
 def test_login_missing_fields(client):
     # Missing email
-    resp = client.post("/users/login", json={
+    resp = client.post("/api/v1/users/login", json={
         "password": "Password1!"
     })
     assert resp.status_code == 422
     # Missing password
-    resp = client.post("/users/login", json={
+    resp = client.post("/api/v1/users/login", json={
         "email": "testuser@example.com"
     })
     assert resp.status_code == 422
 
 def test_login_invalid_email_format(client):
-    resp = client.post("/users/login", json={
+    resp = client.post("/api/v1/users/login", json={
         "email": "not-an-email",
         "password": "Password1!"
     })
     assert resp.status_code == 422
 
 def test_login_unregistered_email(client):
-    resp = client.post("/users/login", json={
+    resp = client.post("/api/v1/users/login", json={
         "email": "doesnotexist@example.com",
         "password": "Password1!"
     })
@@ -171,7 +170,7 @@ def test_login_unregistered_email(client):
     assert "incorrect" in resp.json().get("detail", "").lower()
 
 def test_register_password_complexity(client):
-    resp = client.post("/users/register", json={
+    resp = client.post("/api/v1/users/register", json={
         "name": "NoComplex",
         "email": "nocomplex@example.com",
         "password": "password123"
@@ -180,7 +179,7 @@ def test_register_password_complexity(client):
     assert any("must contain" in err["msg"].lower() for err in resp.json()["detail"])
 
 def test_login_empty_password(client):
-    resp = client.post("/users/login", json={
+    resp = client.post("/api/v1/users/login", json={
         "email": "testuser@example.com",
         "password": ""
     })

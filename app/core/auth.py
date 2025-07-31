@@ -17,7 +17,7 @@ from app.core.config import settings
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)

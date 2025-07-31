@@ -19,9 +19,12 @@ def on_startup() -> None:
 
 
 
-app.include_router(users.router, prefix="/users", tags=["users"])
-app.include_router(chat.router, tags=["chat"])
-app.include_router(health.router)
+
+
+# API Versioning: business endpoints are under /api/v1, health check is unversioned at /health
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
+app.include_router(health.router, tags=["health"])
 
 # Register the global exception handler for AppException
 app.add_exception_handler(AppException, app_exception_handler)
