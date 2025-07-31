@@ -1,0 +1,26 @@
+
+Alembic migration environment for ai_chatbot_code_challenge.
+
+## Usage
+
+Alembic now uses the `DATABASE_URL` environment variable for migrations.
+
+### Local development
+Set your local database URL:
+
+```sh
+export DATABASE_URL=postgresql://chatbot:chatbotpass@localhost:5432/chatbotdb
+alembic revision --autogenerate -m "Initial migration"
+alembic upgrade head
+```
+
+### Docker/Compose
+Set your Docker Compose database URL:
+
+```sh
+export DATABASE_URL=postgresql://chatbot:chatbotpass@db:5432/chatbotdb
+alembic revision --autogenerate -m "Initial migration"
+alembic upgrade head
+```
+
+Alembic will use the correct database depending on your environment.

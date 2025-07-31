@@ -1,20 +1,22 @@
+
+# Standard library imports
+
+# Third-party imports
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.core.database import Base, get_db
 from fastapi.testclient import TestClient
+
+# Local application imports
+from app.core.database import get_db
 from app.main import app
 from app.core.config import settings
 
-TEST_DATABASE_URL = settings.TEST_DATABASE_URL
 
 @pytest.fixture(scope="session")
 def test_engine():
-    engine = create_engine(TEST_DATABASE_URL)
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    engine = create_engine(settings.DATABASE_URL)
     yield engine
-    Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture(scope="function")
 def db_session(test_engine):
@@ -28,7 +30,7 @@ def db_session(test_engine):
     connection.close()
 
 @pytest.fixture(scope="function")
-def client(db_session, monkeypatch):
+def client(db_session):
     def override_get_db():
         yield db_session
     app.dependency_overrides[get_db] = override_get_db

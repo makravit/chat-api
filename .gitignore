@@ -93,9 +93,9 @@ instance/
 
 # VS Code
 .vscode/
-
+ 
 # dotenv
-.env
+#.env (including for easier local development)
 .env.*
 
 # Local test databases

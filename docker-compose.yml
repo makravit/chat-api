@@ -1,46 +1,52 @@
-version: '3.8'
 services:
   test-run:
     build: .
     depends_on:
       - db
+    env_file:
+      - .env
     environment:
-      TEST_DATABASE_URL: postgresql://chatbot:chatbotpass@db:5432/chatbotdb_test
-      DATABASE_URL: postgresql://chatbot:chatbotpass@db:5432/chatbotdb
-    command: ["/bin/sh", "-c", "sleep 5 && pytest --cov=app --cov-report=term-missing --cov-report=html tests/unit tests/integration --disable-warnings -q -ra"]
+      DATABASE_URL: ${TEST_DATABASE_URL}
+    command: ["/bin/sh", "-c", "alembic upgrade head && sleep 5 && pytest --cov=app --cov-report=term-missing --cov-report=html tests/unit tests/integration --disable-warnings -q -ra"]
     volumes:
       - ./app:/app/app
-      - ./requirements.txt:/app/requirements.txt
       - ./tests:/app/tests
+      - ./alembic.ini:/app/alembic.ini
+      - ./alembic:/app/alembic
   db:
     image: postgres:15
     restart: always
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: chatbot
-      POSTGRES_PASSWORD: chatbotpass
-      POSTGRES_DB: chatbotdb
-      # Also create the test database for integration tests
-      POSTGRES_MULTIPLE_DATABASES: chatbotdb_test
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES}
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
-      # Custom entrypoint to create multiple databases
       - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
   app:
     build: .
     depends_on:
       - db
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://chatbot:chatbotpass@db:5432/chatbotdb
-      # Optionally set SECRET_KEY, etc.
+      DATABASE_URL: ${DATABASE_URL}
+      SECRET_KEY: ${SECRET_KEY}
     ports:
       - "8000:8000"
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["/bin/sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+
     volumes:
       - ./app:/app/app
-      - ./requirements.txt:/app/requirements.txt
+      - ./alembic.ini:/app/alembic.ini
+      - ./alembic:/app/alembic
+
 
 volumes:
   db_data:

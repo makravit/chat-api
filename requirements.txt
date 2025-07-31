@@ -10,8 +10,12 @@ starlette              # FastAPI dependency (explicit for clarity)
 typing-extensions      # Typing support for Python <3.12
 structlog              # Structured logging
 
+
 # Testing dependencies
 pytest                 # Test runner
 pytest-cov             # Coverage reporting
 httpx                  # Async HTTP client for testing
 pytest-asyncio         # Asyncio support for pytest
+
+# Migration tool
+alembic                # Database migrations
