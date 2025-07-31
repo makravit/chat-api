@@ -1,5 +1,4 @@
 
-import os
 from typing import Optional
 from datetime import datetime, timedelta
 
@@ -10,8 +9,9 @@ from passlib.context import CryptContext
 
 from app.models.user import User
 from app.core.database import get_db
+from app.core.config import settings
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "secret-key")
+SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")

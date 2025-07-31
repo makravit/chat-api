@@ -1,14 +1,15 @@
 
 
-import os
+
 import datetime
 
 import pytest
 from jose import jwt, ExpiredSignatureError
 
 from app.core.auth import create_access_token, hash_password, verify_password
+from app.core.config import settings
 
-SECRET_KEY = os.getenv("SECRET_KEY", "secret-key")
+SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 
 def test_hash_and_verify_password():

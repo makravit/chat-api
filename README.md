@@ -23,7 +23,7 @@ See [`user-stories.md`](user-stories.md) for detailed requirements and acceptanc
 
 - Modular, production-ready FastAPI structure
 - SQLAlchemy ORM for database access (PostgreSQL only)
-- Pydantic for data validation
+- Pydantic for data validation and configuration management (with pydantic-settings)
 - JWT authentication (using `python-jose`)
 - Password hashing (using `passlib[bcrypt]`)
 - Full unit and integration test suite (pytest)
@@ -50,14 +50,20 @@ user-stories.md   # User stories and acceptance criteria
 
 ## Quickstart (Local Development)
 
+
 1. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
+   
+   > **Note:** This project uses [pydantic-settings](https://pydantic-docs.helpmanual.io/usage/pydantic_settings/) for configuration management (Pydantic v2+). All environment variables (e.g., `DATABASE_URL`, `SECRET_KEY`) are loaded via `app/core/config.py` using a `.env` file or your shell environment.
 
-2. Set the database URL (PostgreSQL only):
+
+2. Set environment variables (optional, overrides defaults):
    ```bash
    export DATABASE_URL=postgresql://chatbot:chatbotpass@localhost:5432/chatbotdb
+   export SECRET_KEY=your-secret-key
+   # Or use a .env file in the project root
    ```
 
 3. Run the server:

@@ -3,6 +3,7 @@ uvicorn                # ASGI server for FastAPI
 python-jose            # JWT authentication
 passlib[bcrypt]        # Password hashing
 pydantic[email]        # Data validation (with email support)
+pydantic-settings     # Pydantic v2 settings management
 sqlalchemy             # ORM
 psycopg2-binary        # PostgreSQL driver
 starlette              # FastAPI dependency (explicit for clarity)

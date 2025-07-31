@@ -4,9 +4,9 @@ from sqlalchemy.orm import sessionmaker
 from app.core.database import Base, get_db
 from fastapi.testclient import TestClient
 from app.main import app
-import os
+from app.core.config import settings
 
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "postgresql://chatbot:chatbotpass@db:5432/chatbotdb_test")
+TEST_DATABASE_URL = settings.TEST_DATABASE_URL
 
 @pytest.fixture(scope="session")
 def test_engine():
