@@ -1,8 +1,9 @@
 from fastapi import Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from app.core.exceptions import AppException, EmailAlreadyRegistered, InvalidCredentials
+from typing import Any
 
-async def app_exception_handler(request: Request, exc: AppException):
+async def app_exception_handler(request: Request, exc: AppException) -> Response:
     # Map specific exceptions to status codes
     if isinstance(exc, EmailAlreadyRegistered):
         status_code = 409

@@ -13,8 +13,10 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
+import typing
+
 @contextlib.contextmanager
-def get_db():
+def get_db() -> typing.Generator:
     db = SessionLocal()
     try:
         yield db

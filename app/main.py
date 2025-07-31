@@ -9,7 +9,7 @@ app = FastAPI(title="AI Chatbot API", description="A REST API for user registrat
 
 # Create tables at startup (for demo/dev)
 @app.on_event("startup")
-def on_startup():
+def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
 
 
