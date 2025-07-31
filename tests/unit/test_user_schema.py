@@ -4,7 +4,9 @@
 # Third-party imports
 import pytest
 
+
 # Local application imports
+from app.schemas.user import UserRegister, UserLogin, UserResponse, TokenResponse
 
 # Additional tests for case sensitivity, password edge cases, name/email edge cases, and tricky invalid emails
 @pytest.mark.parametrize("email", [
@@ -112,6 +114,17 @@ def test_user_login_invalid_email() -> None:
     """Test that an invalid email format in login raises a validation error."""
     with pytest.raises(ValidationError):
         UserLogin(email="not-an-email", password="Password1!")
+
+def test_user_response_schema():
+    resp = UserResponse(id=1, name="Test User", email="test@example.com")
+    assert resp.id == 1
+    assert resp.name == "Test User"
+    assert resp.email == "test@example.com"
+
+def test_token_response_schema():
+    token = TokenResponse(access_token="sometoken")
+    assert token.access_token == "sometoken"
+    assert token.token_type == "bearer"
 
 # Additional tests for registration and login edge cases
 @pytest.mark.parametrize("kwargs", [

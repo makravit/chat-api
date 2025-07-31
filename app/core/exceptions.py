@@ -1,4 +1,5 @@
 
+
 # No imports needed; custom exception hierarchy for application/service errors.
 
 class AppException(Exception):
