@@ -108,7 +108,9 @@ The HTML coverage report will be available in the `htmlcov/` directory.
 - **POST /api/v1/users/register** — Register a new user (name, email, password)
 - **POST /api/v1/users/login** — Log in and receive a JWT token
 - **POST /api/v1/chat** — Send a chat message (requires JWT in Authorization header)
-- **GET /health** — Health check endpoint for readiness/liveness probes. Returns `{ "status": "ok", "db": "ok" }` if healthy, or `{ "status": "error", "db": "down" }` and HTTP 503 if the database is unavailable.
+- **GET /live** — Liveness probe. Returns `{ "status": "alive" }` if the app is running.
+- **GET /ready** — Readiness probe. Returns `{ "status": "ready" }` if the app and DB are ready, or `{ "status": "not ready" }` and HTTP 503 if not.
+- **GET /health** — Detailed health check. Returns `{ "status": "ok"|"error", "db": "ok"|"down" }`.
 
 See the OpenAPI docs at `/docs` for full details and try out the endpoints interactively.
 
