@@ -77,6 +77,7 @@ user-stories.md   # User stories and acceptance criteria
    ```bash
    pytest --cov=app --cov-report=term-missing --cov-report=html tests/unit tests/integration
    ```
+   > **Note:** Async tests are supported via `pytest-asyncio`. No extra configuration is needed; simply run `pytest` as above.
 
 
 ## Running with Docker Compose (Recommended)
@@ -134,6 +135,7 @@ See the OpenAPI docs at `/docs` for full details and try out the endpoints inter
 - pydantic
 - psycopg2-binary (for PostgreSQL)
 - pytest, pytest-cov
+- pytest-asyncio (for async test support)
 
 ## License
 
