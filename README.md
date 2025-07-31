@@ -10,6 +10,9 @@ Both the application logic and automated tests were created solely through natur
 
 This project is a REST API for an AI-powered chatbot service, built with FastAPI (Python). It provides secure user registration, authentication (JWT), and a chat endpoint for interacting with an AI bot. The API is designed for extensibility, maintainability, and follows industry best practices. All code is fully tested (unit and integration) with 100% coverage enforced via Docker Compose.
 
+- Database schema is managed and versioned using Alembic migrations.
+- Migrations are applied automatically in the app and test-run containers.
+
 ## Purpose
 
 
@@ -34,6 +37,9 @@ See [`user-stories.md`](user-stories.md) for detailed requirements and acceptanc
 - Full unit and integration test suite (pytest)
 - 100% code coverage enforced (pytest-cov)
 - Automated test-runner via Docker Compose
+- All environment variables (e.g., `DATABASE_URL`, `SECRET_KEY`, `POSTGRES_USER`, etc.) are loaded from a `.env` file in the project root.
+- The test database is created automatically using the `POSTGRES_MULTIPLE_DATABASES` variable and custom entrypoint scripts.
+- Alembic migration scripts (`alembic/`) and config (`alembic.ini`) are mounted into containers for Alembic to work.
 
 ## Project Structure
 
@@ -85,6 +91,21 @@ user-stories.md   # User stories and acceptance criteria
    ```
    > **Note:** Async tests are supported via `pytest-asyncio`. No extra configuration is needed; simply run `pytest` as above.
 
+
+
+## Database Migrations
+
+Alembic is used for schema migrations. To create a new migration:
+
+```bash
+alembic revision --autogenerate -m "Your migration message"
+```
+
+To apply migrations:
+
+```bash
+alembic upgrade head
+```
 
 ## Running with Docker Compose (Recommended)
 
