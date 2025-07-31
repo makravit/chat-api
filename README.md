@@ -63,6 +63,7 @@ user-stories.md   # User stories and acceptance criteria
    ```bash
    export DATABASE_URL=postgresql://chatbot:chatbotpass@localhost:5432/chatbotdb
    export SECRET_KEY=your-secret-key
+   export LOG_LEVEL=info
    # Or use a .env file in the project root
    ```
 
