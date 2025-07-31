@@ -25,7 +25,7 @@ def readiness_probe():
         with get_db() as db:
             db.execute(text("SELECT 1"))
         return {"status": "ready"}
-    except SQLAlchemyError as e:
+    except Exception as e:
         logger.error("Readiness check DB failure", error=str(e))
         return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"status": "not ready"})
 
@@ -36,7 +36,7 @@ def health_check():
     try:
         with get_db() as db:
             db.execute(text("SELECT 1"))
-    except SQLAlchemyError as e:
+    except Exception as e:
         db_status = "down"
         logger.error("Health check DB failure", error=str(e))
     logger.info("Health check", db=db_status)
