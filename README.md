@@ -1,4 +1,9 @@
-tests/            # Test suite
+# ⚠️ DISCLAIMER — PLEASE READ
+
+This entire application was generated using GitHub Copilot in agent mode, without a single line of code written manually and without any prior experience with Python or FastAPI.
+
+Both the application logic and automated tests were created solely through natural language instructions and iterative refinement with Copilot. This project demonstrates the power and potential of AI-assisted software development.
+
 
 # AI Chatbot API
 
