@@ -21,7 +21,7 @@ Enable users to:
 - Log in and obtain a JWT token
 - Send chat messages to an AI bot (authentication required)
 
-See [`user-stories.md`](user-stories.md) for detailed requirements and acceptance criteria.
+See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and acceptance criteria.
 
 ## Features
 
@@ -55,7 +55,8 @@ tests/            # Unit and integration tests (pytest)
 requirements.txt  # Python dependencies
 Dockerfile        # Production-ready multistage Dockerfile
 docker-compose.yml # Multi-service dev/test environment
-user-stories.md   # User stories and acceptance criteria
+docs/
+  user-stories.md   # User stories and acceptance criteria
 ```
 
 
