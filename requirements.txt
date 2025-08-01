@@ -11,11 +11,13 @@ typing-extensions      # Typing support for Python <3.12
 structlog              # Structured logging
 
 
+
 # Testing dependencies
 pytest                 # Test runner
 pytest-cov             # Coverage reporting
 httpx                  # Async HTTP client for testing
 pytest-asyncio         # Asyncio support for pytest
+testcontainers[postgresql]  # Ephemeral DBs for integration tests
 
 # Migration tool
 alembic                # Database migrations

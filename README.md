@@ -8,10 +8,10 @@ Both the application logic and automated tests were created solely through natur
 # AI Chatbot API
 
 
-This project is a REST API for an AI-powered chatbot service, built with FastAPI (Python). It provides secure user registration, authentication (JWT), and a chat endpoint for interacting with an AI bot. The API is designed for extensibility, maintainability, and follows industry best practices. All code is fully tested (unit and integration) with 100% coverage enforced via Docker Compose.
+This project is a REST API for an AI-powered chatbot service, built with FastAPI (Python). It provides secure user registration, authentication (JWT), and a chat endpoint for interacting with an AI bot. The API is designed for extensibility, maintainability, and follows industry best practices. All code is fully tested (unit and integration) with 100% coverage enforced via pytest.
 
 - Database schema is managed and versioned using Alembic migrations.
-- Migrations are applied automatically in the app and test-run containers.
+- Migrations are applied automatically in the app container and during tests.
 
 ## Purpose
 
@@ -36,7 +36,7 @@ See [`user-stories.md`](user-stories.md) for detailed requirements and acceptanc
 - Password hashing (using `passlib[bcrypt]`)
 - Full unit and integration test suite (pytest)
 - 100% code coverage enforced (pytest-cov)
-- Automated test-runner via Docker Compose
+- Integration tests use Testcontainers for ephemeral PostgreSQL DBs; no Docker Compose needed for testing.
 - All environment variables (e.g., `DATABASE_URL`, `SECRET_KEY`, `POSTGRES_USER`, etc.) are loaded from a `.env` file in the project root.
 - The test database is created automatically using the `POSTGRES_MULTIPLE_DATABASES` variable and custom entrypoint scripts.
 - Alembic migration scripts (`alembic/`) and config (`alembic.ini`) are mounted into containers for Alembic to work.
@@ -59,37 +59,22 @@ user-stories.md   # User stories and acceptance criteria
 ```
 
 
-## Quickstart (Local Development)
 
+## Quickstart
 
-1. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-   
-   > **Note:** This project uses [pydantic-settings](https://pydantic-docs.helpmanual.io/usage/pydantic_settings/) for configuration management (Pydantic v2+). All environment variables (e.g., `DATABASE_URL`, `SECRET_KEY`) are loaded via `app/core/config.py` using a `.env` file or your shell environment.
-
-
-2. Set environment variables (optional, overrides defaults):
-   ```bash
-   export DATABASE_URL=postgresql://chatbot:chatbotpass@localhost:5432/chatbotdb
-   export SECRET_KEY=your-secret-key
-   export LOG_LEVEL=info
-   # Or use a .env file in the project root
+1. Build and start the app and database with Docker Compose:
+   ```sh
+   docker compose up --build
    ```
 
-3. Run the server:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
+   - The app will be available at [http://localhost:8000](http://localhost:8000)
+   - Interactive API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+   - Database migrations are applied automatically on startup.
 
-4. Visit the interactive docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-
-5. To run all tests and check coverage locally:
-   ```bash
-   pytest --cov=app --cov-report=term-missing --cov-report=html tests/unit tests/integration
+2. To stop and remove containers:
+   ```sh
+   docker compose down
    ```
-   > **Note:** Async tests are supported via `pytest-asyncio`. No extra configuration is needed; simply run `pytest` as above.
 
 
 
@@ -107,27 +92,27 @@ To apply migrations:
 alembic upgrade head
 ```
 
-## Running with Docker Compose (Recommended)
 
-The included `docker-compose.yml` runs the FastAPI app, a PostgreSQL database, and a test-runner service for automated testing and coverage.
 
-```bash
-docker compose up --build
-```
 
-This will:
-- Start a PostgreSQL 15 database (user: `chatbot`, password: `chatbotpass`, db: `chatbotdb`)
-- Start the FastAPI app, automatically connected to the database
-- Expose the API at [http://localhost:8000](http://localhost:8000)
-- Run all unit and integration tests in the `test-run` service, enforcing 100% coverage
 
-You can change database credentials in `docker-compose.yml` as needed. **Only PostgreSQL is supported.**
+## Running Tests (Local Environment)
 
-To run tests and see the coverage report:
-```bash
-docker compose run --rm test-run
-```
-The HTML coverage report will be available in the `htmlcov/` directory.
+1. Set up your Python environment:
+   ```sh
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install --upgrade pip
+   pip install -r requirements.txt
+   ```
+
+2. Run all tests:
+   ```sh
+   pytest --cov=app --cov-report=term-missing --cov-report=html tests/unit tests/integration
+   ```
+   Testcontainers will manage the test database automatically during local pytest runs.
+
+   The HTML coverage report will be available in the `htmlcov/` directory.
 
 ## API Overview
 

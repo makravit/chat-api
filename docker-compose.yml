@@ -1,18 +1,4 @@
 services:
-  test-run:
-    build: .
-    depends_on:
-      - db
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: ${TEST_DATABASE_URL}
-    command: ["/bin/sh", "-c", "alembic upgrade head && sleep 5 && pytest --cov=app --cov-report=term-missing --cov-report=html tests/unit tests/integration --disable-warnings -q -ra"]
-    volumes:
-      - ./app:/app/app
-      - ./tests:/app/tests
-      - ./alembic.ini:/app/alembic.ini
-      - ./alembic:/app/alembic
   db:
     image: postgres:15
     restart: always
@@ -22,12 +8,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES}
+
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+
 
   app:
     build: .
@@ -41,11 +27,11 @@ services:
     ports:
       - "8000:8000"
     command: ["/bin/sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
-
     volumes:
       - ./app:/app/app
       - ./alembic.ini:/app/alembic.ini
       - ./alembic:/app/alembic
+
 
 
 volumes:
