@@ -268,3 +268,52 @@ before building Docker images. This ensures `poetry.lock` matches your dependenc
 ## License
 
 MIT
+
+## Metrics Endpoint Authentication
+
+The `/metrics` endpoint is protected with Basic Authentication. Credentials are loaded from environment variables in your `.env` file:
+
+```ini
+METRICS_USER=metricsuser
+METRICS_PASS=metricspass
+```
+
+These variables are also passed to the app container via `docker-compose.yml`:
+
+```yaml
+    environment:
+      METRICS_USER: ${METRICS_USER}
+      METRICS_PASS: ${METRICS_PASS}
+```
+
+To access `/metrics`, use your monitoring tool (e.g., Prometheus) with the configured username and password. Update these values in `.env` for production security.
+
+The credentials are accessed in code via the `Settings` object (`app/core/config.py`).
+
+Example request:
+
+```sh
+curl -u metricsuser:metricspass http://localhost:8000/metrics
+```
+
+If authentication fails, the endpoint returns HTTP 401 Unauthorized.
+
+---
+
+## Securing Sensitive Information in Production
+
+This application uses several sensitive values (e.g., database credentials, JWT secret keys, metrics credentials) loaded from environment variables in the `.env` file. **Never commit real secrets to version control.**
+
+For production deployments, use secure secret management solutions such as:
+
+- **Azure Key Vault** (recommended for Azure)
+- **AWS Secrets Manager**
+- **HashiCorp Vault**
+- **Docker secrets** (for Swarm)
+- **Kubernetes secrets**
+
+Configure your deployment platform to inject secrets as environment variables at runtime, and restrict access to only necessary services. Rotate secrets regularly and audit access.
+
+For more details, see:
+- [Azure Key Vault documentation](https://learn.microsoft.com/en-us/azure/key-vault/general/overview)
+- [12 Factor App: Store config in the environment](https://12factor.net/config)

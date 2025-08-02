@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "chatbotdb"
     SECRET_KEY: str = "secret-key"
     LOG_LEVEL: str = "INFO"  # Configurable log level, e.g., DEBUG, INFO, WARNING, ERROR
+    METRICS_USER: str = "metrics"
+    METRICS_PASS: str = "metrics"
 
     model_config = ConfigDict(env_file=".env")
 

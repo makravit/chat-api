@@ -1,10 +1,10 @@
-
 # Standard library imports
+import secrets
 from datetime import UTC, datetime, timedelta
 
 # Third-party imports
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBasic, HTTPBasicCredentials, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
@@ -18,6 +18,7 @@ SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
+security = HTTPBasic()
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -48,3 +49,15 @@ def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)) ->
     if user is None:
         raise credentials_exception
     return user
+
+def basic_auth_guard(username: str, password: str):
+    def _guard(credentials: HTTPBasicCredentials = Depends(security)):
+        correct_username = secrets.compare_digest(credentials.username, username)
+        correct_password = secrets.compare_digest(credentials.password, password)
+        if not (correct_username and correct_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials",
+                headers={"WWW-Authenticate": "Basic"},
+            )
+    return _guard

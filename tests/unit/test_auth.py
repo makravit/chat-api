@@ -4,10 +4,17 @@ import datetime
 
 # Third-party imports
 import pytest
+from fastapi import HTTPException, status
+from fastapi.security import HTTPBasicCredentials
 from jose import ExpiredSignatureError, jwt
 
 # Local application imports
-from app.core.auth import create_access_token, hash_password, verify_password
+from app.core.auth import (
+    basic_auth_guard,
+    create_access_token,
+    hash_password,
+    verify_password,
+)
 from app.core.config import settings
 
 SECRET_KEY = settings.SECRET_KEY
@@ -45,3 +52,30 @@ def test_token_missing_claims():
     token = create_access_token({"foo": "bar"})
     decoded = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     assert "sub" not in decoded
+
+BASIC_AUTH_USERNAME = "testuser"
+BASIC_AUTH_PASSWORD = "testpass"
+
+def test_basic_auth_guard_invalid_username():
+    guard = basic_auth_guard(BASIC_AUTH_USERNAME, BASIC_AUTH_PASSWORD)
+    credentials = HTTPBasicCredentials(username="wronguser", password=BASIC_AUTH_PASSWORD)
+    with pytest.raises(HTTPException) as exc:
+        guard(credentials)
+    assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "Invalid credentials" in exc.value.detail
+
+def test_basic_auth_guard_invalid_password():
+    guard = basic_auth_guard(BASIC_AUTH_USERNAME, BASIC_AUTH_PASSWORD)
+    credentials = HTTPBasicCredentials(username=BASIC_AUTH_USERNAME, password="wrongpass")
+    with pytest.raises(HTTPException) as exc:
+        guard(credentials)
+    assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "Invalid credentials" in exc.value.detail
+
+def test_basic_auth_guard_invalid_both():
+    guard = basic_auth_guard(BASIC_AUTH_USERNAME, BASIC_AUTH_PASSWORD)
+    credentials = HTTPBasicCredentials(username="wronguser", password="wrongpass")
+    with pytest.raises(HTTPException) as exc:
+        guard(credentials)
+    assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED
+    assert "Invalid credentials" in exc.value.detail
