@@ -1,1 +1,15 @@
+# Set default to LF for all text files
 * text=auto eol=lf
+
+# Explicitly set Python files to LF
+*.py text eol=lf
+
+# YAML and other config files
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+
+# Dockerfile and Shell scripts
+Dockerfile text eol=lf
+*.sh text eol=lf
