@@ -9,9 +9,9 @@ repos:
     rev: v0.4.4
     hooks:
       - id: ruff
-        args: ["--fix"]
+        args: []
   - repo: https://github.com/PyCQA/isort
     rev: 6.0.1
     hooks:
       - id: isort
-        args: ["--profile=black"]
+        args: ["--profile=black", "--check-only"]

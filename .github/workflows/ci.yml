@@ -41,10 +41,14 @@ jobs:
         run: |
           poetry install
 
-      - name: Run pre-commit checks
+      - name: Show versions
         run: |
-          poetry run pre-commit run --all-files
+          poetry run pre-commit --version
+          poetry run isort --version-number
 
+      - name: Run pre-commit checks (check-only, do not auto-fix)
+        run: |
+          poetry run pre-commit run --all-files --show-diff-on-failure --color=always
 
       - name: Run tests
         run: |
