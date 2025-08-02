@@ -1,10 +1,8 @@
 
-# Standard library imports
 
 # Third-party imports
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
 
 # Local application imports

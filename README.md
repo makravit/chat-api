@@ -104,7 +104,7 @@ alembic upgrade head
    python -m venv .venv
    source .venv/bin/activate
    pip install --upgrade pip
-   pip install -r requirements.txt
+   pip install -r requirements.txt -r dev-requirements.txt
    ```
 
 2. Run all tests:
@@ -141,17 +141,39 @@ See the OpenAPI docs at `/docs` for full details and try out the endpoints inter
 
 ## Requirements
 
+### Production requirements (`requirements.txt`)
 
-- Python 3.8+
-- FastAPI
-- Uvicorn
-- SQLAlchemy
-- passlib[bcrypt]
+- Python 3.13+
+- fastapi
+- uvicorn
 - python-jose
-- pydantic
-- psycopg2-binary (for PostgreSQL)
-- pytest, pytest-cov
-- pytest-asyncio (for async test support)
+- passlib[bcrypt]
+- pydantic[email]
+- pydantic-settings
+- sqlalchemy
+- psycopg2-binary
+- starlette
+- typing-extensions
+- structlog
+
+### Development & test requirements (`dev-requirements.txt`)
+
+- pytest
+- pytest-cov
+- httpx
+- pytest-asyncio
+- testcontainers[postgresql]
+- ruff
+- alembic
+- cython
+- setuptools
+- wheel
+
+## CI/CD
+
+- Automated tests, linting, and coverage are run via GitHub Actions using both requirements.txt and dev-requirements.txt.
+- Production Docker images are built using a multistage Dockerfile that only installs production dependencies.
+- Development dependencies are not included in the production image for security and size.
 
 ## License
 

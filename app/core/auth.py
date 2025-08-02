@@ -1,6 +1,6 @@
 
+
 # Standard library imports
-from typing import Optional
 from datetime import datetime, timedelta
 
 # Third-party imports

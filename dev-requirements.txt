@@ -1,0 +1,10 @@
+pytest
+pytest-cov
+httpx
+pytest-asyncio
+testcontainers[postgresql]
+ruff
+alembic
+cython
+setuptools
+wheel

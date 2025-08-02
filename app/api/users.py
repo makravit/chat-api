@@ -1,13 +1,12 @@
 
-# Standard library imports
 
 # Third-party imports
-from fastapi import APIRouter, status, Depends, HTTPException, Request
+from fastapi import APIRouter, status, Depends
 from sqlalchemy.orm import Session
 
 # Local application imports
 from app.schemas.user import UserRegister, UserLogin, UserResponse, TokenResponse
-from app.services.user_service import register_user, authenticate_user, EmailAlreadyRegistered, InvalidCredentials, AppException
+from app.services.user_service import register_user, authenticate_user
 from app.core.logging import logger
 from app.core.database import get_db
 

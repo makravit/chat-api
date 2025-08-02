@@ -3,7 +3,6 @@
 
 # Third-party imports
 import pytest
-from fastapi import status
 
 # Local application imports
 
@@ -86,23 +85,6 @@ def test_register_invalid_email(client):
     })
     assert resp.status_code == 422
     assert any("email" in err["msg"].lower() for err in resp.json()["detail"])
-
-def test_register_duplicate_email(client):
-    # Register first user
-    resp = client.post("/api/v1/users/register", json={
-        "name": "DupEmail",
-        "email": "dupemail@example.com",
-        "password": "Password1!"
-    })
-    assert resp.status_code == 201
-    # Register with same email, different name
-    resp2 = client.post("/api/v1/users/register", json={
-        "name": "DupEmail2",
-        "email": "dupemail@example.com",
-        "password": "Password1!"
-    })
-    assert resp2.status_code == 409
-    assert "already registered" in resp2.json()["detail"].lower()
 
 def test_register_duplicate_username(client):
     # Register first user

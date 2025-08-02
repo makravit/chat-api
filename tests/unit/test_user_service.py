@@ -1,13 +1,15 @@
 
+
+# Standard library imports
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+# Third-party imports
 import pytest
 
+# Local application imports
 from app.services.user_service import EmailAlreadyRegistered, InvalidCredentials
-
 from app.core.auth import hash_password
-from app.schemas.user import UserRegister, UserLogin
 from app.services.user_service import register_user, authenticate_user
 
 def test_register_user_success():

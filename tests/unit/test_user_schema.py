@@ -1,9 +1,11 @@
 
 
-# Minimal direct tests for validate_password_complexity (standalone function)
+
+# Third-party imports
 import pytest
-from pydantic import ValidationError
-from app.schemas.user import validate_password_complexity, UserRegister, UserLogin, UserResponse, TokenResponse
+
+# Local application imports
+from app.schemas.user import validate_password_complexity, UserRegister, UserLogin
 
 def test_validate_password_complexity_valid():
     assert validate_password_complexity("Password1!") == "Password1!"
@@ -33,7 +35,6 @@ def test_validate_password_complexity_missing_letter():
         validate_password_complexity("12345678!")
     assert "must contain letters, numbers, and at least one symbol" in str(exc.value)
 
-# One integration test for UserLogin and UserRegister
 def test_user_login_valid():
     login = UserLogin(email="valid@example.com", password="Password1!")
     assert login.email == "valid@example.com"

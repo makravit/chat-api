@@ -1,11 +1,12 @@
 
 # Standard library imports
 
+
 # Third-party imports
 from sqlalchemy.orm import Session
 
 # Local application imports
-from app.core.exceptions import AppException, EmailAlreadyRegistered, InvalidCredentials
+from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials
 from app.models.user import User
 from app.core.auth import hash_password, verify_password, create_access_token
 from app.services.user_repository import UserRepository

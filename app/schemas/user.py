@@ -2,7 +2,6 @@
 
 # Standard library imports
 import re
-from typing import Optional
 
 # Third-party imports
 from pydantic import BaseModel, EmailStr, field_validator
