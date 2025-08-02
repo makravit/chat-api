@@ -1,12 +1,14 @@
 
 # Standard library imports
 
+import app.api.chat
+
 # Third-party imports
 import pytest
 
 # Local application imports
 from app.core.auth import create_access_token
-import app.api.chat
+
 
 def get_token(client):
     client.post("/api/v1/users/register", json={

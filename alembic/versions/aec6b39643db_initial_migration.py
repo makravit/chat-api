@@ -4,10 +4,15 @@ Revision ID: aec6b39643db
 Revises: None
 Create Date: 2025-07-31 19:12:44.500485
 
+
 """
-from alembic import op
+# Standard library imports
+
+# Third-party imports
 import sqlalchemy as sa
 
+# Local application imports
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'aec6b39643db'

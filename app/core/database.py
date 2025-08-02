@@ -3,12 +3,13 @@
 import contextlib
 import typing
 
-# Third-party imports
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-
 # Local application imports
 from app.core.config import settings
+
+# Third-party imports
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+
 
 def get_engine():
     return create_engine(settings.DATABASE_URL)

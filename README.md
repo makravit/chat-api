@@ -7,14 +7,13 @@ Both the application logic and automated tests were created solely through natur
 
 # AI Chatbot API
 
-
 This project is a REST API for an AI-powered chatbot service, built with FastAPI (Python). It provides secure user registration, authentication (JWT), and a chat endpoint for interacting with an AI bot. The API is designed for extensibility, maintainability, and follows industry best practices. All code is fully tested (unit and integration) with 100% coverage enforced via pytest.
 
 - Database schema is managed and versioned using Alembic migrations.
 - Migrations are applied automatically in the app container and during tests.
 
-## Purpose
 
+## Purpose
 
 Enable users to:
 - Register and create an account (data stored in a real database via SQLAlchemy)
@@ -22,6 +21,7 @@ Enable users to:
 - Send chat messages to an AI bot (authentication required)
 
 See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and acceptance criteria.
+
 
 ## Features
 
@@ -40,6 +40,7 @@ See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and
 - All environment variables (e.g., `DATABASE_URL`, `SECRET_KEY`, `POSTGRES_USER`, etc.) are loaded from a `.env` file in the project root.
 - The test database is created automatically using the `POSTGRES_MULTIPLE_DATABASES` variable and custom entrypoint scripts.
 - Alembic migration scripts (`alembic/`) and config (`alembic.ini`) are mounted into containers for Alembic to work.
+
 
 ## Project Structure
 
@@ -60,7 +61,6 @@ docs/
 ```
 
 
-
 ## Quickstart
 
 1. Build and start the app and database with Docker Compose:
@@ -78,7 +78,6 @@ docs/
    ```
 
 
-
 ## Database Migrations
 
 Alembic is used for schema migrations. To create a new migration:
@@ -94,10 +93,7 @@ alembic upgrade head
 ```
 
 
-
-
-
-## Running Tests (Local Environment)
+## Running Tests & Code Quality (Local Environment)
 
 1. Set up your Python environment:
    ```sh
@@ -107,13 +103,25 @@ alembic upgrade head
    pip install -r requirements.txt -r dev-requirements.txt
    ```
 
-2. Run all tests:
+2. (Recommended) Run isort and ruff to auto-format and lint your code:
+   ```sh
+   isort . --profile=black
+   ruff check --fix .
+   ```
+
+3. (Optional) Run pre-commit hooks manually on all files:
+   ```sh
+   pre-commit run --all-files
+   ```
+
+4. Run all tests:
    ```sh
    pytest --cov=app --cov-report=term-missing --cov-report=html tests/unit tests/integration
    ```
    Testcontainers will manage the test database automatically during local pytest runs.
 
    The HTML coverage report will be available in the `htmlcov/` directory.
+
 
 ## API Overview
 
@@ -139,7 +147,6 @@ See the OpenAPI docs at `/docs` for full details and try out the endpoints inter
 - Add more endpoints, business logic, or AI integrations as needed
 - Write additional tests in the `tests/` folder
 
-## Requirements
 
 ### Production requirements (`requirements.txt`)
 
@@ -156,24 +163,30 @@ See the OpenAPI docs at `/docs` for full details and try out the endpoints inter
 - typing-extensions
 - structlog
 
+
 ### Development & test requirements (`dev-requirements.txt`)
 
-- pytest
-- pytest-cov
-- httpx
-- pytest-asyncio
-- testcontainers[postgresql]
-- ruff
 - alembic
 - cython
+- httpx
+- isort
+- pre-commit
+- pytest
+- pytest-asyncio
+- pytest-cov
+- ruff
 - setuptools
+- testcontainers[postgresql]
 - wheel
+
 
 ## CI/CD
 
-- Automated tests, linting, and coverage are run via GitHub Actions using both requirements.txt and dev-requirements.txt.
+- Automated tests, linting, import sorting (isort), and code style (ruff) are enforced via pre-commit hooks and GitHub Actions.
+- The CI pipeline runs pre-commit checks on every push and pull request, ensuring code quality and consistency before tests and builds.
 - Production Docker images are built using a multistage Dockerfile that only installs production dependencies.
 - Development dependencies are not included in the production image for security and size.
+
 
 ## License
 

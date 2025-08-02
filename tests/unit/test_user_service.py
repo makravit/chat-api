@@ -6,11 +6,16 @@ from unittest.mock import MagicMock, patch
 
 # Third-party imports
 import pytest
+from app.core.auth import hash_password
 
 # Local application imports
-from app.services.user_service import EmailAlreadyRegistered, InvalidCredentials
-from app.core.auth import hash_password
-from app.services.user_service import register_user, authenticate_user
+from app.services.user_service import (
+    EmailAlreadyRegistered,
+    InvalidCredentials,
+    authenticate_user,
+    register_user,
+)
+
 
 def test_register_user_success():
     name = "Test"
@@ -61,4 +66,3 @@ def test_authenticate_user_not_found():
     with patch("app.services.user_service.UserRepository", return_value=repo_mock):
         with pytest.raises(InvalidCredentials):
             authenticate_user(email, password, MagicMock())
-

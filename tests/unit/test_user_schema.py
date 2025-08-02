@@ -5,7 +5,8 @@
 import pytest
 
 # Local application imports
-from app.schemas.user import validate_password_complexity, UserRegister, UserLogin
+from app.schemas.user import UserLogin, UserRegister, validate_password_complexity
+
 
 def test_validate_password_complexity_valid():
     assert validate_password_complexity("Password1!") == "Password1!"
@@ -42,4 +43,3 @@ def test_user_login_valid():
 def test_user_register_valid():
     user = UserRegister(name="Valid User", email="valid@example.com", password="Password1!")
     assert user.email == "valid@example.com"
-

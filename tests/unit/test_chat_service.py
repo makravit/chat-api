@@ -4,11 +4,11 @@ from unittest.mock import Mock
 
 # Third-party imports
 import pytest
-from pydantic import ValidationError
+from app.schemas.chat import ChatRequest
 
 # Local application imports
 from app.services.chat_service import process_chat
-from app.schemas.chat import ChatRequest
+from pydantic import ValidationError
 
 
 @pytest.mark.parametrize("message,expected_error", [

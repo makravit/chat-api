@@ -3,17 +3,19 @@
 
 # Third-party imports
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from fastapi.testclient import TestClient
-from testcontainers.postgres import PostgresContainer
+from app.core.config import settings
 
 # Local application imports
 from app.core.database import get_db
-from app.core.config import settings
 from app.main import app
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from testcontainers.postgres import PostgresContainer
+
 from alembic import command
 from alembic.config import Config
+
 
 @pytest.fixture(scope="session")
 def postgres_container():

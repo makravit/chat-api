@@ -2,13 +2,14 @@
 # Standard library imports
 
 
+from app.core.exception_handlers import app_exception_handler
+from app.core.exceptions import AppException
+
 # Third-party imports
 from fastapi import FastAPI
 
 # Local application imports
-from app.api import users, chat, health
-from app.core.exception_handlers import app_exception_handler
-from app.core.exceptions import AppException
+from app.api import chat, health, users
 
 app = FastAPI(title="AI Chatbot API", description="A REST API for user registration, authentication, and AI chat.")
 

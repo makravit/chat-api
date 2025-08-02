@@ -6,6 +6,7 @@
 # Local application imports
 from app.models.user import User
 
+
 def test_user_model_fields():
     user = User(id=1, name="Test User", email="test@example.com", hashed_password="hashed")
     assert user.id == 1

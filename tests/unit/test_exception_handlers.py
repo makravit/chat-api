@@ -1,12 +1,12 @@
 
-from app.core.exceptions import AppException, EmailAlreadyRegistered, InvalidCredentials
-from app.core.exception_handlers import app_exception_handler
-
 # Standard library imports
 from unittest.mock import MagicMock
 
 # Third-party imports
 import pytest
+from app.core.exception_handlers import app_exception_handler
+from app.core.exceptions import AppException, EmailAlreadyRegistered, InvalidCredentials
+
 pytestmark = pytest.mark.asyncio
 
 @pytest.mark.asyncio

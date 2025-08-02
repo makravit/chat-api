@@ -2,14 +2,15 @@
 
 # Standard library imports
 
-# Third-party imports
-from fastapi import APIRouter, Depends
+from app.core.auth import get_current_user
+from app.core.logging import logger
 
 # Local application imports
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.chat_service import process_chat
-from app.core.logging import logger
-from app.core.auth import get_current_user
+
+# Third-party imports
+from fastapi import APIRouter, Depends
 
 router = APIRouter(tags=["Chat"])
 

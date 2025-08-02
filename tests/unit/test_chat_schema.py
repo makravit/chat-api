@@ -3,10 +3,11 @@
 
 # Third-party imports
 import pytest
-from pydantic import ValidationError
 
 # Local application imports
 from app.schemas.chat import ChatRequest
+from pydantic import ValidationError
+
 
 def test_chat_request_valid():
     req = ChatRequest(message="Hello!")

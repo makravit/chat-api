@@ -93,7 +93,7 @@ instance/
 
 # VS Code
 .vscode/
- 
+
 # dotenv
 #.env (including for easier local development)
 .env.*

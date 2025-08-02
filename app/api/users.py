@@ -1,15 +1,16 @@
 
 # Standard library imports
 
-# Third-party imports
-from fastapi import APIRouter, status, Depends
-from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.core.logging import logger
 
 # Local application imports
-from app.schemas.user import UserRegister, UserLogin, UserResponse, TokenResponse
-from app.services.user_service import register_user, authenticate_user
-from app.core.logging import logger
-from app.core.database import get_db
+from app.schemas.user import TokenResponse, UserLogin, UserRegister, UserResponse
+from app.services.user_service import authenticate_user, register_user
+
+# Third-party imports
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["Users"])
 

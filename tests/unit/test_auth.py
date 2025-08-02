@@ -4,11 +4,11 @@ import datetime
 
 # Third-party imports
 import pytest
-from jose import jwt, ExpiredSignatureError
 
 # Local application imports
 from app.core.auth import create_access_token, hash_password, verify_password
 from app.core.config import settings
+from jose import ExpiredSignatureError, jwt
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"

@@ -2,11 +2,12 @@
 # Standard library imports
 from unittest.mock import MagicMock
 
-# Third-party imports
-
 # Local application imports
 from app.models.user import User
 from app.services.user_repository import UserRepository
+
+# Third-party imports
+
 
 def make_db_with_users(users=None):
     db = MagicMock()

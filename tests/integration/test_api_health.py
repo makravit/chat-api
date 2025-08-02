@@ -1,11 +1,12 @@
 
 # Standard library imports
 
+# Local application imports
+from app.main import app
+
 # Third-party imports
 from fastapi.testclient import TestClient
 
-# Local application imports
-from app.main import app
 
 def test_liveness():
     client = TestClient(app)

@@ -2,16 +2,17 @@
 # Standard library imports
 from datetime import datetime, timedelta
 
+from app.core.config import settings
+from app.core.database import get_db
+
+# Local application imports
+from app.models.user import User
+
 # Third-party imports
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-
-# Local application imports
-from app.models.user import User
-from app.core.database import get_db
-from app.core.config import settings
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"

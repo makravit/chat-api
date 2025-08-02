@@ -3,11 +3,12 @@
 # Standard library imports
 from typing import Optional
 
+# Local application imports
+from app.models.user import User
+
 # Third-party imports
 from sqlalchemy.orm import Session
 
-# Local application imports
-from app.models.user import User
 
 class UserRepository:
     """Repository for user database operations."""

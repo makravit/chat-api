@@ -2,15 +2,17 @@
 # Standard library imports
 
 
-# Third-party imports
-from sqlalchemy.orm import Session
+from app.core.auth import create_access_token, hash_password, verify_password
 
 # Local application imports
 from app.core.exceptions import EmailAlreadyRegistered, InvalidCredentials
-from app.models.user import User
-from app.core.auth import hash_password, verify_password, create_access_token
-from app.services.user_repository import UserRepository
 from app.core.logging import logger
+from app.models.user import User
+from app.services.user_repository import UserRepository
+
+# Third-party imports
+from sqlalchemy.orm import Session
+
 
 def register_user(name: str, email: str, password: str, db: Session) -> User:
     """Register a new user. Raises EmailAlreadyRegistered if email exists. Returns ORM User object."""
