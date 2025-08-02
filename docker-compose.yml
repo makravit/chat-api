@@ -26,7 +26,7 @@ services:
       SECRET_KEY: ${SECRET_KEY}
     ports:
       - "8000:8000"
-    command: ["/bin/sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    command: ["/bin/sh", "-c", "poetry run alembic upgrade head && poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000"]
     volumes:
       - ./app:/app/app
       - ./alembic.ini:/app/alembic.ini

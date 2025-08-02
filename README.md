@@ -53,7 +53,8 @@ app/
   services/       # Business logic (user, chat)
   core/           # Core utilities (auth, security, database)
 tests/            # Unit and integration tests (pytest)
-requirements.txt  # Python dependencies
+pyproject.toml    # Poetry dependency and tool configuration
+poetry.lock       # Locked dependency versions
 Dockerfile        # Production-ready multistage Dockerfile
 docker-compose.yml # Multi-service dev/test environment
 docs/
@@ -67,7 +68,6 @@ docs/
    ```sh
    docker compose up --build
    ```
-
    - The app will be available at [http://localhost:8000](http://localhost:8000)
    - Interactive API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
    - Database migrations are applied automatically on startup.
@@ -78,49 +78,86 @@ docs/
    ```
 
 
+## Dependency Management
+
+**Poetry must be installed globally before running any project commands.**
+
+To install Poetry (recommended method):
+
+```sh
+curl -sSL https://install.python-poetry.org | python3 -
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+To make Poetry available in all terminal sessions, add this line to your shell profile (for zsh):
+
+```sh
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+After installing Poetry, set your project to use Python 3.13:
+
+```sh
+poetry env use 3.13
+```
+
+All dependencies are managed with Poetry. To install them:
+
+```sh
+poetry install
+```
+
+
 ## Database Migrations
 
 Alembic is used for schema migrations. To create a new migration:
 
-```bash
-alembic revision --autogenerate -m "Your migration message"
+```sh
+poetry run alembic revision --autogenerate -m "Your migration message"
 ```
 
 To apply migrations:
 
-```bash
-alembic upgrade head
+```sh
+poetry run alembic upgrade head
 ```
 
 
-## Running Tests & Code Quality (Local Environment)
+## Running Tests & Code Quality
 
-1. Set up your Python environment:
-   ```sh
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install --upgrade pip
-   pip install -r requirements.txt -r dev-requirements.txt
-   ```
+All test, lint, and formatting commands should be run via Poetry:
 
-2. (Recommended) Run isort and ruff to auto-format and lint your code:
-   ```sh
-   isort . --profile=black
-   ruff check --fix .
-   ```
 
-3. (Optional) Run pre-commit hooks manually on all files:
-   ```sh
-   pre-commit run --all-files
-   ```
+### Run tests
 
-4. Run all tests:
-   ```sh
-   pytest --cov=app --cov-report=term-missing --cov-report=html tests/unit tests/integration
-   ```
-   Testcontainers will manage the test database automatically during local pytest runs.
+```sh
+poetry run pytest
+```
 
-   The HTML coverage report will be available in the `htmlcov/` directory.
+### Run coverage
+
+```sh
+poetry run pytest --cov=app --cov-report=html
+```
+The HTML coverage report will be available in the `htmlcov/` directory.
+
+
+### Lint and format
+
+```sh
+poetry run isort .
+poetry run ruff .
+```
+
+
+### Pre-commit hooks
+
+Install and run pre-commit hooks:
+```sh
+poetry run pre-commit install
+poetry run pre-commit run --all-files
+```
 
 
 ## API Overview
@@ -148,11 +185,14 @@ See the OpenAPI docs at `/docs` for full details and try out the endpoints inter
 - Write additional tests in the `tests/` folder
 
 
-### Production requirements (`requirements.txt`)
+## Dependencies
 
+All dependencies (production and development) are declared in `pyproject.toml` and locked in `poetry.lock`. Use `poetry add <package>` or `poetry add --group dev <package>` to manage them.
+
+Key production dependencies:
 - Python 3.13+
 - fastapi
-- uvicorn
+- uvicorn[standard]
 - python-jose
 - passlib[bcrypt]
 - pydantic[email]
@@ -162,11 +202,9 @@ See the OpenAPI docs at `/docs` for full details and try out the endpoints inter
 - starlette
 - typing-extensions
 - structlog
+- alembic  # Alembic is now a production dependency for migrations
 
-
-### Development & test requirements (`dev-requirements.txt`)
-
-- alembic
+Key development dependencies:
 - cython
 - httpx
 - isort
@@ -180,11 +218,22 @@ See the OpenAPI docs at `/docs` for full details and try out the endpoints inter
 - wheel
 
 
+## Poetry & Docker builds
+
+If you change dependencies in `pyproject.toml`, always run:
+
+```sh
+poetry lock
+```
+
+before building Docker images. This ensures `poetry.lock` matches your dependencies and avoids build errors.
+
+
 ## CI/CD
 
 - Automated tests, linting, import sorting (isort), and code style (ruff) are enforced via pre-commit hooks and GitHub Actions.
-- The CI pipeline runs pre-commit checks on every push and pull request, ensuring code quality and consistency before tests and builds.
-- Production Docker images are built using a multistage Dockerfile that only installs production dependencies.
+- The CI pipeline runs pre-commit checks and tests on every push and pull request, ensuring code quality and consistency before builds.
+- Production Docker images are built using a multistage Dockerfile that only installs production dependencies from Poetry.
 - Development dependencies are not included in the production image for security and size.
 
 

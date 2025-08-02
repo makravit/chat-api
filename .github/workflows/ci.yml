@@ -23,35 +23,32 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
 
-      - name: Install dependencies
+      - name: Install Poetry
         run: |
-          set -e
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt -r dev-requirements.txt
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
+
+      - name: Set Poetry Python version
+        run: |
+          poetry env use 3.13
+
+      - name: Update poetry.lock if needed
+        run: |
+          poetry lock
+
+      - name: Install dependencies with Poetry
+        run: |
+          poetry install
 
       - name: Run pre-commit checks
         run: |
-          set -e
-          source .venv/bin/activate
-          pip install pre-commit
-          pre-commit run --all-files
+          poetry run pre-commit run --all-files
 
 
       - name: Run tests
         run: |
-          set -e
-          source .venv/bin/activate
-          pytest --cov=app --cov-report=term-missing --cov-report=html tests/unit tests/integration
+          poetry run pytest --cov=app --cov-report=term-missing --cov-report=html tests/unit tests/integration
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
