@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 # Third-party imports
 import pytest
+
 from app.core.auth import hash_password
 
 # Local application imports

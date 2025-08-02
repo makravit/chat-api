@@ -1,13 +1,13 @@
 
 # Standard library imports
 
-# Local application imports
-from app.core.exceptions import AppException, EmailAlreadyRegistered, InvalidCredentials
-from app.core.logging import logger
-
 # Third-party imports
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
+
+# Local application imports
+from app.core.exceptions import AppException, EmailAlreadyRegistered, InvalidCredentials
+from app.core.logging import logger
 
 
 async def app_exception_handler(request: Request, exc: AppException) -> Response:

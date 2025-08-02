@@ -1,15 +1,15 @@
 
 # Standard library imports
 
-from app.core.database import get_db
-
-# Local application imports
-from app.core.logging import logger
-
 # Third-party imports
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+
+from app.core.database import get_db
+
+# Local application imports
+from app.core.logging import logger
 
 router = APIRouter()
 

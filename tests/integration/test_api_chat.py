@@ -1,10 +1,10 @@
 
 # Standard library imports
 
-import app.api.chat
-
 # Third-party imports
 import pytest
+
+import app.api.chat
 
 # Local application imports
 from app.core.auth import create_access_token
