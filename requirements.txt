@@ -1,11 +1,11 @@
 fastapi
-uvicorn
-python-jose
 passlib[bcrypt]
+psycopg2-binary
 pydantic[email]
 pydantic-settings
+python-jose
 sqlalchemy
-psycopg2-binary
 starlette
-typing-extensions
 structlog
+typing-extensions
+uvicorn
