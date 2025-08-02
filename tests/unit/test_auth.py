@@ -27,7 +27,7 @@ def test_create_access_token():
     assert decoded["sub"] == "user@example.com"
 
 def test_expired_token():
-    exp = datetime.datetime.utcnow() - datetime.timedelta(seconds=1)
+    exp = datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=1)
     payload = {"sub": "user@example.com", "exp": exp}
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     with pytest.raises(ExpiredSignatureError):

@@ -138,7 +138,7 @@ poetry run pytest
 ### Run coverage
 
 ```sh
-poetry run pytest --cov=app --cov-report=html
+poetry run pytest --cov=app --cov-report=term-missing --cov-report=html
 ```
 The HTML coverage report will be available in the `htmlcov/` directory.
 
@@ -151,12 +151,39 @@ poetry run ruff .
 ```
 
 
+### Auto-fix code style issues
+
+
+To automatically fix issues detected by Ruff and isort, run:
+
+```sh
+poetry run ruff check --fix .
+poetry run isort .
+```
+
+- Ruff will auto-fix most lint and formatting issues.
+- isort will auto-fix import sorting and formatting.
+
+You can run these commands before committing code or as part of your workflow to keep your codebase clean and consistent.
+
+
 ### Pre-commit hooks
 
 Install and run pre-commit hooks:
 ```sh
 poetry run pre-commit install
 poetry run pre-commit run --all-files
+```
+
+
+### Suppress DeprecationWarnings during tests (optional)
+
+To hide deprecation warnings in your test output, add a `pytest.ini` file to your project root with:
+
+```ini
+[pytest]
+filterwarnings =
+    ignore::DeprecationWarning
 ```
 
 
@@ -168,6 +195,7 @@ poetry run pre-commit run --all-files
 - **GET /live** — Liveness probe. Returns `{ "status": "alive" }` if the app is running.
 - **GET /ready** — Readiness probe. Returns `{ "status": "ready" }` if the app and DB are ready, or `{ "status": "not ready" }` and HTTP 503 if not.
 - **GET /health** — Detailed health check. Returns `{ "status": "ok"|"error", "db": "ok"|"down" }`.
+- **GET /metrics** — Prometheus metrics endpoint. Returns service and application metrics in Prometheus text format for monitoring and observability. Use with Prometheus, Grafana, or other monitoring tools. Only expose internally or protect with authentication if public.
 
 See the OpenAPI docs at `/docs` for full details and try out the endpoints interactively.
 
