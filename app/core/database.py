@@ -1,5 +1,4 @@
 
-
 # Standard library imports
 import contextlib
 import typing
