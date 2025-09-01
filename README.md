@@ -107,6 +107,21 @@ All dependencies are managed with Poetry. To install them:
 ```sh
 poetry install
 ```
+## Updating Packages
+
+To update all dependencies to their latest allowed versions, run:
+
+```bash
+poetry update
+```
+
+This will update the packages specified in `pyproject.toml` and refresh the `poetry.lock` file. To update a specific package, use:
+
+```bash
+poetry update <package-name>
+```
+
+For more details, see the [Poetry documentation](https://python-poetry.org/docs/cli/#update).
 
 
 ## Database Migrations
