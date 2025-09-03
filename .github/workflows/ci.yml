@@ -48,10 +48,6 @@ jobs:
           restore-keys: |
             poetry-deps-${{ runner.os }}-
 
-      - name: Update poetry.lock if needed
-        run: |
-          poetry lock
-
       - name: Install dependencies with Poetry
         run: |
           poetry install
