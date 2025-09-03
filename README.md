@@ -5,6 +5,7 @@ This entire application was generated using GitHub Copilot in agent mode, withou
 Both the application logic and automated tests were created solely through natural language instructions and iterative refinement with Copilot. This project demonstrates the power and potential of AI-assisted software development.
 
 
+
 # AI Chatbot API
 
 This project is a REST API for an AI-powered chatbot service, built with FastAPI (Python). It provides secure user registration, authentication (JWT), and a chat endpoint for interacting with an AI bot. The API is designed for extensibility, maintainability, and follows industry best practices. All code is fully tested (unit and integration) with 100% coverage enforced via pytest.
@@ -37,7 +38,12 @@ See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and
 - Full unit and integration test suite (pytest)
 - 100% code coverage enforced (pytest-cov)
 - Integration tests use Testcontainers for ephemeral PostgreSQL DBs; no Docker Compose needed for testing.
-- All environment variables (e.g., `DATABASE_URL`, `SECRET_KEY`, `POSTGRES_USER`, etc.) are loaded from a `.env` file in the project root.
+- All environment variables are loaded from a `.env` file in the project root. To set up your environment variables, copy `.env.example` to `.env` and update the values as needed:
+
+  ```sh
+  cp .env.example .env
+  # Edit .env and set your secrets and configuration
+  ```
 - The test database is created automatically using the `POSTGRES_MULTIPLE_DATABASES` variable and custom entrypoint scripts.
 - Alembic migration scripts (`alembic/`) and config (`alembic.ini`) are mounted into containers for Alembic to work.
 
@@ -284,31 +290,19 @@ before building Docker images. This ensures `poetry.lock` matches your dependenc
 
 MIT
 
+
 ## Metrics Endpoint Authentication
 
-The `/metrics` endpoint is protected with Basic Authentication. Credentials are loaded from environment variables in your `.env` file:
+The `/metrics` endpoint is protected with Basic Authentication. Credentials are loaded from environment variables in your `.env` file. See `.env.example` for required variables and example values.
 
-```ini
-METRICS_USER=metricsuser
-METRICS_PASS=metricspass
-```
-
-These variables are also passed to the app container via `docker-compose.yml`:
-
-```yaml
-    environment:
-      METRICS_USER: ${METRICS_USER}
-      METRICS_PASS: ${METRICS_PASS}
-```
+These variables are also passed to the app container via `docker-compose.yml`.
 
 To access `/metrics`, use your monitoring tool (e.g., Prometheus) with the configured username and password. Update these values in `.env` for production security.
-
-The credentials are accessed in code via the `Settings` object (`app/core/config.py`).
 
 Example request:
 
 ```sh
-curl -u metricsuser:metricspass http://localhost:8000/metrics
+curl -u <METRICS_USER>:<METRICS_PASS> http://localhost:8000/metrics
 ```
 
 If authentication fails, the endpoint returns HTTP 401 Unauthorized.
@@ -316,6 +310,7 @@ If authentication fails, the endpoint returns HTTP 401 Unauthorized.
 ---
 
 ## Securing Sensitive Information in Production
+
 
 This application uses several sensitive values (e.g., database credentials, JWT secret keys, metrics credentials) loaded from environment variables in the `.env` file. **Never commit real secrets to version control.**
 

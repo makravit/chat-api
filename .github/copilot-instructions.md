@@ -72,21 +72,9 @@ Write tests in the `tests/` folder:
 Use `ruff` for linting and code style, and `isort` for import sorting.
 Run `poetry run isort .` and `poetry run ruff .` before committing code.
 
-## Environment Variables
-Set the following variables in your `.env` file before running the application:
-- `DATABASE_URL`: Database connection string
-- `SECRET_KEY`: Secret for authentication
-- `POSTGRES_USER`: Database username
-- `POSTGRES_PASSWORD`: Database password
-- `POSTGRES_DB`: Database name
-- `LOG_LEVEL`: Logging level
-- `METRICS_USER`: Metrics endpoint username
-- `METRICS_PASS`: Metrics endpoint password
 
-Document all required environment variables in `.env.example`:
-- `DATABASE_URL`: Database connection string
-- `SECRET_KEY`: Secret for authentication
-- Add any other variables used for third-party integrations or configuration
+## Environment Variables
+All required environment variables should be documented in `.env.example` in the project root. Before running the application, copy `.env.example` to `.env` and set your secrets and configuration values. Never commit real secrets to version control.
 
 ## Dependency Management
 Poetry is used for dependency management. To update all packages, run:
