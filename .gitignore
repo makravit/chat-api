@@ -96,7 +96,7 @@ instance/
 
 
 # dotenv
-#.env
+.env
 .env.*
 !.env.example
 
