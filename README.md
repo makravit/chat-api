@@ -44,6 +44,8 @@ See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and
   cp .env.example .env
   # Edit .env and set your secrets and configuration
   ```
+
+> **Note:** You can configure the JWT token expiration (in minutes) using the `JWT_EXPIRE_MINUTES` environment variable. The default is 15 minutes if not set.
 - The test database is created automatically using the `POSTGRES_MULTIPLE_DATABASES` variable and custom entrypoint scripts.
 - Alembic migration scripts (`alembic/`) and config (`alembic.ini`) are mounted into containers for Alembic to work.
 
