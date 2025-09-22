@@ -10,7 +10,7 @@ Both the application logic and automated tests were created solely through natur
 
 [![CI Pipeline](https://github.com/makravit/chat-api/actions/workflows/ci.yml/badge.svg)](https://github.com/makravit/chat-api/actions/workflows/ci.yml)
 
-This project is a REST API for an AI-powered chatbot service, built with FastAPI (Python). It provides secure user registration, authentication (JWT), and a chat endpoint for interacting with an AI bot. The API is designed for extensibility, maintainability, and follows industry best practices. All code is fully tested (unit and integration) with 100% coverage enforced via pytest.
+This project is a REST API for an AI-powered chatbot service, built with FastAPI (Python). It provides secure user registration, authentication (JWT), session management with secure refresh tokens, a profile endpoint, health/readiness endpoints, a Prometheus metrics endpoint, and a chat endpoint for interacting with an AI bot. The API is designed for extensibility and maintainability, follows industry best practices, and is fully tested (unit and integration) with 100% coverage enforced via pytest.
 
 - Database schema is managed and versioned using Alembic migrations.
 - Migrations are applied automatically in the app container and during tests.
@@ -20,7 +20,8 @@ This project is a REST API for an AI-powered chatbot service, built with FastAPI
 
 Enable users to:
 - Register and create an account (data stored in a real database via SQLAlchemy)
-- Log in and obtain a JWT token
+- Log in and obtain a JWT access token (with secure refresh tokens)
+- Retrieve their own profile (id, name, email)
 - Send chat messages to an AI bot (authentication required)
 
 See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and acceptance criteria.
@@ -38,8 +39,10 @@ See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and
   - Session metadata: user agent and IP are stored for each token
   - Suspicious activity logging: all invalid, expired, revoked token use, and user agent/IP anomalies are logged
   - Error handling: invalid, expired, or reused tokens return `401 Unauthorized` with a generic error message
-Logout: `POST /api/v1/users/logout` — Revokes the current session's refresh token (requires valid token from cookie or header; does not revoke all sessions)
-Logout everywhere: `POST /api/v1/users/logout-all` — Revokes all refresh tokens for the user (logout everywhere)
+- Logout: `POST /api/v1/users/logout` — revokes the current session's refresh token (requires valid refresh token from secure cookie; does not revoke all sessions)
+- Logout everywhere: `POST /api/v1/users/logout-all` — revokes all refresh tokens for the user (logout everywhere)
+  - Both endpoints log suspicious activity for invalid, expired, or revoked token use
+- My profile: `GET /api/v1/users/me` — returns the authenticated user's profile (id, name, email)
   - Both endpoints log suspicious activity for invalid, expired, or revoked token use
 - Authenticated chat: `POST /api/v1/chat`
 
@@ -65,8 +68,7 @@ Logout everywhere: `POST /api/v1/users/logout-all` — Revokes all refresh token
   # Edit .env and set your secrets and configuration
   ```
 
-> **Note:** You can configure the JWT token expiration (in minutes) using the `JWT_EXPIRE_MINUTES` environment variable. The default is 15 minutes if not set. Refresh token expiration is configurable via `REFRESH_TOKEN_EXPIRE_DAYS` (default: 7 days).
-- The test database is created automatically using the `POSTGRES_MULTIPLE_DATABASES` variable and custom entrypoint scripts.
+> **Note:** You can configure the JWT token expiration (in minutes) using the `JWT_EXPIRE_MINUTES` environment variable. The default is 15 minutes if not set. Refresh token expiration is configurable via `REFRESH_TOKEN_EXPIRE_DAYS` (default: 1 day). The maximum refresh token lifetime is configurable via `REFRESH_TOKEN_MAX_LIFETIME_DAYS` (default: 30 days).
 - Alembic migration scripts (`alembic/`) and config (`alembic.ini`) are mounted into containers for Alembic to work.
 
 ## Development
@@ -106,7 +108,7 @@ Before opening a PR, please:
 ```
 app/
   main.py         # FastAPI app entrypoint
-  api/            # API route definitions (users, chat)
+  api/            # API route definitions (users, chat, health, metrics)
   models/         # SQLAlchemy ORM models
   schemas/        # Pydantic schemas (request/response validation)
   services/       # Business logic (user, chat)
@@ -406,6 +408,22 @@ Keep contributions aligned with these core rules (enforced by Ruff and CI):
 
 ## API Overview
 
+- Endpoints quick reference
+
+| Method | Path                     | Auth          | Description |
+|-------:|--------------------------|---------------|-------------|
+| POST   | /api/v1/users/register   | No            | Register a new user (name, email, password) |
+| POST   | /api/v1/users/login      | No            | Log in and receive JWT access token; sets secure refresh cookie |
+| POST   | /api/v1/users/refresh-token | No (cookie) | Rotate refresh token (from secure cookie) and return new access token |
+| POST   | /api/v1/users/logout     | Bearer + cookie | Revoke current session’s refresh token; clears cookie |
+| POST   | /api/v1/users/logout-all | Bearer        | Revoke all refresh tokens for the user; clears cookie |
+| GET    | /api/v1/users/me         | Bearer        | Get the authenticated user’s profile (id, name, email) |
+| POST   | /api/v1/chat             | Bearer        | Send a chat message to the AI bot |
+| GET    | /live                    | No            | Liveness probe |
+| GET    | /ready                   | No            | Readiness probe (checks DB) |
+| GET    | /health                  | No            | Health check (app + DB status) |
+| GET    | /metrics                 | Basic Auth    | Prometheus metrics |
+
 - **POST /api/v1/users/register** — Register a new user (name, email, password)
 - **POST /api/v1/users/login** — Log in and receive a JWT token and refresh token
   - Accepts email and password
@@ -437,6 +455,7 @@ Keep contributions aligned with these core rules (enforced by Ruff and CI):
   - On failure (no valid tokens), returns `401 Unauthorized` with a generic error message
 
 - **POST /api/v1/chat** — Send a chat message (requires JWT in Authorization header)
+- **GET /api/v1/users/me** — Get the authenticated user's profile (id, name, email)
 - **GET /live** — Liveness probe. Returns `{ "status": "alive" }` if the app is running.
 - **GET /ready** — Readiness probe. Returns `{ "status": "ready" }` if the app and DB are ready, or `{ "status": "not ready" }` and HTTP 503 if not.
 - **GET /health** — Detailed health check. Returns `{ "status": "ok"|"error", "db": "ok"|"down" }`.
@@ -454,7 +473,7 @@ See the OpenAPI docs at `/docs` for full details and try out the endpoints inter
 - Suspicious activity logging is implemented for all refresh token operations
 - The provided Dockerfile runs the app as a non-root user for security
 
-Cookie policy: The refresh cookie lifetime is derived from REFRESH_TOKEN_EXPIRE_DAYS (in seconds). For security, HttpOnly, Secure, and SameSite=strict are hardcoded and cannot be relaxed. The cookie is rotated alongside the refresh token on /refresh-token.
+Cookie policy: The refresh cookie lifetime is derived from `REFRESH_TOKEN_EXPIRE_DAYS` (in seconds). For security, HttpOnly, Secure, and SameSite=strict are enforced. The cookie is rotated alongside the refresh token on `/api/v1/users/refresh-token` and cleared on logout endpoints.
 
 
 ## Extending the App
