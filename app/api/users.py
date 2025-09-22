@@ -247,3 +247,25 @@ def logout_all(
         email=current_user.email,
     )
     _clear_refresh_cookie(response)
+
+
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    summary="Retrieve my user profile",
+    description="Return the authenticated user's profile (id, name, email).",
+    response_description="The authenticated user's profile.",
+)
+def get_me(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> UserResponse:
+    """Return the current authenticated user's profile.
+
+    Requires a valid Bearer access token. If the token is missing or invalid,
+    a 401 Unauthorized is returned by the dependency.
+    """
+    return UserResponse(
+        id=current_user.id,
+        name=current_user.name,
+        email=current_user.email,
+    )

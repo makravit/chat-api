@@ -4,10 +4,13 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
+from sqlalchemy.orm import Session
 
 import app.services.user_service
 from app.core.auth import ALGORITHM, SECRET_KEY, get_current_user
 from app.main import app as main_app
+from app.models.refresh_token import RefreshToken
+from app.models.user import User
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from tests.utils import (
     assert_deleted_refresh_cookie,
@@ -831,3 +834,65 @@ def test_register_email_whitespace_normalization_integration(
         },
     )
     assert login.status_code == 200
+
+
+# ------------------------------ /users/me -------------------------------
+
+
+def test_get_me_success(
+    client: TestClient,
+    login_and_get_tokens: Callable[[], dict[str, object]],
+) -> None:
+    tokens = login_and_get_tokens()
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    resp = client.get("/api/v1/users/me", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert set(data.keys()) == {"id", "name", "email"}
+    assert isinstance(data["id"], int)
+    assert isinstance(data["name"], str)
+    assert isinstance(data["email"], str)
+
+
+def test_get_me_unauthenticated(client: TestClient) -> None:
+    resp = client.get("/api/v1/users/me")
+    assert resp.status_code == 401
+    # Our dependency message is precise; accept either generic or standard
+    assert (
+        "not authenticated" in resp.json()["detail"].lower()
+        or "authentication required" in resp.json()["detail"].lower()
+    )
+
+
+def test_get_me_invalid_token(
+    client: TestClient,
+) -> None:
+    headers = {"Authorization": "Bearer invalid.jwt.token"}
+    resp = client.get("/api/v1/users/me", headers=headers)
+    assert resp.status_code == 401
+
+
+def test_get_me_deleted_user_returns_401(
+    client: TestClient,
+    login_and_get_tokens: Callable[[], dict[str, object]],
+    db_session: Session,
+) -> None:
+    tokens = login_and_get_tokens()
+    email = tokens["user_data"]["email"]
+    # Delete the user directly in the DB to simulate a stale token
+    user = db_session.query(User).filter(User.email == email).first()
+    assert user is not None
+    # Remove dependent refresh tokens first to satisfy FK constraints
+    db_session.query(RefreshToken).filter(RefreshToken.user_id == user.id).delete()
+    db_session.flush()
+    db_session.delete(user)
+    db_session.flush()
+
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    resp = client.get("/api/v1/users/me", headers=headers)
+    assert resp.status_code == 401
+    # Accept either the dependency's precise message or the default Not authenticated
+    assert (
+        "authentication required" in resp.json()["detail"].lower()
+        or "not authenticated" in resp.json()["detail"].lower()
+    )

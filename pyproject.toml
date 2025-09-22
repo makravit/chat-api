@@ -70,6 +70,7 @@ lint.extend-select = [
   "ANN",    # flake8-annotations (type annotation coverage)
   "ASYNC",  # flake8-async
   "B",      # flake8-bugbear
+  "B035",   # useless await or similar (replaces RUF011)
   "BLE",    # blind-except
   "C4",     # flake8-comprehensions
   "C90",    # mccabe complexity
@@ -99,7 +100,6 @@ lint.extend-select = [
   "RUF008", # mutable class attributes
   "RUF009", # function call in default arg
   "RUF010", # try-except-in-loop
-  "RUF011", # useless "await" or similar
   "RUF012", # mutable default in dataclass field
   "RUF100", # remove unused noqa
   "S",      # bandit security checks
