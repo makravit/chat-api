@@ -1,153 +1,177 @@
 <!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
 
-This is a FastAPI-based chat API project. Use these guidelines for Copilot suggestions:
 
-## Project Purpose
-Robust RESTful API for chat, user management, health checks, and metrics, built with FastAPI for scalability and maintainability.
+# FastAPI Chat API – Copilot Instructions
+
+## Purpose
+This file provides future-facing guidelines for contributors and Copilot to implement new features in a scalable, secure, and maintainable way. Do not use this file to explain current features; focus on principles, patterns, and requirements for future development.
 
 ## Technologies
-- FastAPI: API framework
-- Pydantic: Data validation and typing
-- Poetry: Dependency management
-- Alembic: Database migrations
-- Docker: Containerization and deployment
+- FastAPI (API framework)
+- Pydantic (data validation)
+- Poetry (dependency management)
+- Alembic (database migrations)
+- Docker (containerization)
 
-## Folder Structure & Best Practices
-	- `api/`: Route definitions (chat, users, health, metrics)
-	- `core/`: Core utilities (auth, config, database, logging, exceptions)
-	- `models/`: ORM models
-	- `schemas/`: Pydantic schemas
-	- `services/`: Business logic and data access
+## Folder Structure
+- `api/`: Route definitions
+- `core/`: Core utilities (auth, config, database, logging, exceptions)
+- `models/`: ORM models
+- `schemas/`: Pydantic schemas
+- `services/`: Business logic and data access
 
 ## Coding Guidelines
-Follow Python and FastAPI best practices:
 - Use dependency injection via FastAPI's `Depends` for services and repositories
 - Handle errors with custom exception handlers
 - Organize code for readability and maintainability
 - Use type hints and Pydantic models for data validation
 - Keep business logic in `services/`, not in API routes
-
-## Example Code Patterns
-Example: Dependency injection, authentication, Pydantic models, and business logic separation:
-```python
-from fastapi import APIRouter, Depends
-from app.core.auth import get_current_user
-from app.schemas.chat import ChatRequest, ChatResponse
-from app.services.chat_service import process_chat
-
-router = APIRouter(tags=["Chat"])
-
-@router.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest, user=Depends(get_current_user)):
-	# Logging, authentication, and business logic separation
-	return process_chat(request, user)
-```
-
-Example: Error handling with custom exceptions and global exception handler:
-```python
-from fastapi import FastAPI
-from app.core.exception_handlers import app_exception_handler
-from app.core.exceptions import AppException
-
-app = FastAPI()
-app.add_exception_handler(AppException, app_exception_handler)
-```
-
-Define custom exceptions for domain-specific errors (e.g., `EmailAlreadyRegistered`, `InvalidCredentials`).
-Register a global exception handler to map exceptions to appropriate HTTP responses and log details.
-
-## Testing
-Write tests in the `tests/` folder:
-- Use pytest for unit and integration tests
-- Maintain high test coverage
-- Use fixtures for setup and teardown
-- Mock external dependencies in unit tests
-- Run tests before committing code
-
-## Naming Conventions
-- Use snake_case for files and functions, PascalCase for classes.
-- Prefix API routers with their domain (e.g., `chat.py`, `users.py`).
-
-## Linting & Formatting
-Use `ruff` for linting and code style, and `isort` for import sorting.
-Run `poetry run isort .` and `poetry run ruff .` before committing code.
-
-
-## Environment Variables
-All required environment variables should be documented in `.env.example` in the project root. Before running the application, copy `.env.example` to `.env` and set your secrets and configuration values. Never commit real secrets to version control.
-
-## Dependency Management
-Poetry is used for dependency management. To update all packages, run:
-	```bash
-	poetry update
-	```
-
-## Python Version
-The project requires Python 3.13. Ensure your environment matches this version.
-Set your Poetry environment to Python 3.13:
-```sh
-poetry env use 3.13
-```
-
-## Setup Instructions
-Refer to the README for detailed setup steps, including Poetry installation and environment setup.
-To run the app and database with Docker Compose:
-```sh
-docker compose up --build
-```
-
-## Database Migrations
-Alembic is used for migrations. Migration scripts are located in the `alembic/` folder.
-Run Alembic migrations with:
-```sh
-poetry run alembic upgrade head
-```
-
-## Testing Coverage
-Maintain high test coverage. Use pytest and coverage tools as needed.
-Run coverage with:
-```sh
-poetry run pytest --cov=app --cov-report=html
-```
-To suppress deprecation warnings in test output, add a `pytest.ini` file:
-```ini
-[pytest]
-filterwarnings =
-    ignore::DeprecationWarning
-```
-
-## Docker Usage
-Docker is supported for containerization and deployment. See the README for usage instructions.
-
-## API Documentation
-- Use FastAPI's built-in OpenAPI/Swagger docs.
-- Document endpoints with docstrings and Pydantic models.
-- API endpoints are versioned under `/api/v1/`.
-
-## Security Guidelines
-- Store secrets securely (never commit them).
-- Use authentication and authorization for protected endpoints.
-- Validate and sanitize all user input.
-
-## Contribution & Maintenance
-- Follow Python and FastAPI best practices
-- Keep code modular and well-documented
-- Keep both README and copilot-instructions updated and in sync for onboarding and automation.
+- Implement security best practices for authentication, refresh tokens, and session management (see user stories)
 
 ## Extending the App
-- When adding new endpoints or features, follow the existing modular structure and ensure corresponding unit and integration tests are added in the `tests` folder.
+When adding new endpoints or features:
+- Follow the modular folder structure
+- Add corresponding unit and integration tests in `tests/`
+- Document new environment variables in `.env.example`
+- Use Pydantic models for request/response validation
+- Add docstrings and OpenAPI documentation
+- Ensure new code is covered by tests and passes linting
 
-## License
-- This project is licensed under the MIT License.
+## Contribution & Maintenance
+- Keep code modular, well-documented, and consistent with best practices
+- Update README and copilot-instructions for onboarding and automation
+- Use pre-commit hooks to enforce code quality
+- Ensure CI/CD checks pass before merging or deploying
 
-## User Stories & Requirements
-- See `docs/user-stories.md` for requirements and acceptance criteria.
+## Tooling & Workflow
+- Use `ruff` for linting and code style
+- Let Ruff manage import sorting (enable isort rules via Ruff)
+- Use Poetry for dependency management
+- Use Alembic for database migrations
+- Use Docker for local development and deployment
 
-## Pre-commit Hooks
-- Use pre-commit hooks to enforce code quality before pushing.
+### Linting, formatting, and static analysis (Ruff)
+The project’s canonical style and checks are enforced by Ruff (configured in `pyproject.toml`). Key rules and conventions you must follow when adding or modifying code:
 
-## Security Reminder
-- Do not commit `.env` files with secrets to version control.
+- Python version and formatting
+	- Target Python 3.13 for lint semantics (`target-version = py313`).
+	- Line length 88. Use double quotes and spaces for indentation.
+	- Imports are sorted by Ruff’s isort rules; combine `as` imports; first-party is `app`.
+	- Prefer absolute imports and tidy import style. Relative imports are banned (flake8-tidy-imports).
 
-## CI/CD
-- Automated tests, linting, and code style checks are enforced via pre-commit hooks and GitHub Actions. Ensure all checks pass before merging or deploying.
+- Docstrings and documentation
+	- Google-style docstrings are required for modules, functions, classes, and methods under `app/**`.
+	- Docstrings are not required in tests (`tests/**`) and small helper scripts (`scripts/**`).
+
+- Security and secrets
+	- Security checks from Bandit (`S` rules) are enabled.
+	- Tests: `assert` is allowed (S101 ignored). Avoid asserting in app code.
+	- Dev defaults may exist only in `app/core/config.py` (per-file S105 ignore) and the constant token type in `app/schemas/user.py` (per-file S105 ignore). Real secrets must come from environment variables (`.env`), not source code.
+
+- Testing style and patterns
+	- Pytest style rules (`PT`) are enforced: prefer `pytest.mark.parametrize`, avoid bare asserts only in non-tests, and keep tests small and readable.
+	- Boolean positional args are disallowed in app code (`FBT`), but allowed in tests (per-file ignore) for fixtures/helpers.
+
+- Async and return flow
+	- `ASYNC` and `RET` families guide proper async usage and clean return paths.
+
+- Exceptions and raising
+	- Use `RSE` and `TRY` rules for clear exception raising and handling patterns.
+
+- Readability and performance
+	- Use `SIM`, `PERF`, and `C4` (comprehensions) for simpler, faster code.
+
+- Naming and annotations
+	- `N` (pep8-naming), `A` (no shadowing builtins), and `ANN` (annotation coverage) are enabled. Keep type hints complete and accurate.
+
+- Confusables and hygiene
+	- `RUF001–RUF003` prevent ambiguous Unicode; `RUF100` removes stale `noqa`.
+
+- Misc
+	- Disallow `print` and debugger calls in committed code (`T20`, `T10`).
+	- Type-checking import placement is optimized (`TCH`).
+	- `UP`/`pyupgrade` modernizes syntax; keep runtime typing as configured.
+	- McCabe complexity max is 10; refactor if you exceed it.
+
+- Per-file ignores (summary)
+	- `alembic/**`: docstrings not enforced (generated/ops-focused).
+	- `scripts/**`: docstrings not enforced (small helper scripts).
+	- `tests/**`: docstrings not enforced; allow boolean positional args (`FBT`); allow `assert` (S101).
+	- `app/core/config.py`: allow S105 (dev/local defaults only; no real secrets).
+	- `app/schemas/user.py`: allow S105 for constant token type ("bearer").
+
+Run locally:
+
+```sh
+poetry run pre-commit run --all-files
+poetry run ruff check .
+poetry run ruff format .
+```
+
+CI and local development both expect 100% test coverage. Keep code changes small and tested.
+
+## Testing Guidelines
+- Write focused, behavior-driven tests under `tests/` (unit and integration). Keep route handlers thin; test business logic in `services/` directly.
+- Prefer standard mocking utilities over hand-rolled stubs:
+	- Use `unittest.mock.MagicMock` and `types.SimpleNamespace` for lightweight doubles.
+	- Patch repositories/services with `unittest.mock.patch` at import paths used by the subject under test (e.g., `app.services.user_service.UserRepository`).
+- Reuse the shared helpers in `tests/utils.py` to keep tests concise and consistent:
+	- `make_dummy_db()` — a placeholder DB when no DB behavior is asserted (repos are patched).
+	- `make_db_query_first(result)` — returns a DB where `query().filter().first()` yields `result`.
+	- `make_db_query_all(results)` — returns a DB where `query().filter().all()` yields `results`.
+	- `make_db_commit_mock()` — returns a DB with `db.assert_committed_once()` to assert a single commit.
+- When not to use the helpers: if the test specifically validates repository query/filter behavior, create a tailored fake (see `tests/unit/test_user_repository.py`).
+- Style & quality gates:
+	- Enforce 100% coverage (pytest-cov) and keep tests readable and small.
+	- Ruff is the single source of truth for lint/format/import sort. Line length 88 is enforced—wrap long strings/docstrings.
+	- Keep imports at top of test files; avoid in-block imports.
+- Integration tests: Prefer Testcontainers for Postgres when exercising real DB paths. Keep integration tests focused and deterministic.
+
+## Dependency policy (Poetry)
+
+- Use Poetry for dependency management. The project pins versions as "within-major" ranges (e.g., `>=2.7.1,<3.0.0`).
+- To update all packages to the latest allowed versions within their major, run:
+
+```sh
+poetry update
+```
+
+- Do not introduce caret (`^`) or overly permissive constraints; prefer explicit `>=,<` ranges to avoid accidental major upgrades. If a major bump is needed, coordinate it as a dedicated change with full validation.
+
+Examples (concise):
+
+```python
+# Control .first()
+from tests.utils import make_db_query_first
+db = make_db_query_first(result=None)
+assert repo(db).get_valid_token("nope") is None
+```
+
+```python
+# Assert a single commit
+from tests.utils import make_db_commit_mock
+db = make_db_commit_mock()
+repo(db).revoke_all_tokens(123)
+db.assert_committed_once()
+```
+
+## Security & Compliance
+- Store secrets securely (never commit them)
+- Validate and sanitize all user input
+- Use authentication and authorization for protected endpoints
+
+## API Documentation
+- Use FastAPI's built-in OpenAPI/Swagger docs
+- Version endpoints under `/api/v1/`
+
+## References
+- See `docs/user-stories.md` for requirements and acceptance criteria
+- See README for setup and usage instructions
+
+## Import Organization
+Always import libraries only at the top of each file. Group imports in this order:
+1. Standard library imports
+2. Third-party imports
+3. Local application imports
+
+All code changes and suggestions must be consistent with this import grouping and placement.

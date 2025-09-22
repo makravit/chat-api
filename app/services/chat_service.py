@@ -1,15 +1,14 @@
+"""Chat service with simple heuristic responses."""
 
-
-# Local application imports
 from app.schemas.chat import ChatRequest, ChatResponse
 
-# Dummy AI bot logic
 
-def process_chat(request: ChatRequest, user) -> ChatResponse:
-    """Process a chat request and return a bot response."""
-    # Pydantic already validates message content and length
+def process_chat(request: ChatRequest, _user: object) -> ChatResponse:
+    """Process a chat request and return a bot response.
+
+    A minimal, deterministic implementation for demonstration and testing.
+    """
     message = request.message.strip()
-    # Simulate bot response
     if "hello" in message.lower():
         reply = "Hello! How can I assist you today?"
     else:

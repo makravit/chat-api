@@ -1,22 +1,31 @@
-
-# Standard library imports
 from unittest.mock import MagicMock
 
-# Third-party imports
 import pytest
 
 from app.core.exception_handlers import app_exception_handler
-from app.core.exceptions import AppException, EmailAlreadyRegistered, InvalidCredentials
+from app.core.exceptions import (
+    AppError,
+    EmailAlreadyRegisteredError,
+    InvalidCredentialsError,
+)
 
 pytestmark = pytest.mark.asyncio
 
+
 @pytest.mark.asyncio
-@pytest.mark.parametrize("exc,expected_status,expected_detail", [
-    (EmailAlreadyRegistered("Email exists!"), 409, "Email exists!"),
-    (InvalidCredentials("Bad creds!"), 401, "Bad creds!"),
-    (AppException("Generic error!"), 500, "Generic error!")
-])
-async def test_app_exception_handler(exc, expected_status, expected_detail):
+@pytest.mark.parametrize(
+    ("exc", "expected_status", "expected_detail"),
+    [
+        (EmailAlreadyRegisteredError("Email exists!"), 409, "Email exists!"),
+        (InvalidCredentialsError("Bad creds!"), 401, "Bad creds!"),
+        (AppError("Generic error!"), 500, "Generic error!"),
+    ],
+)
+async def test_app_exception_handler(
+    exc: Exception,
+    expected_status: int,
+    expected_detail: str,
+) -> None:
     req = MagicMock()
     response = await app_exception_handler(req, exc)
     assert response.status_code == expected_status

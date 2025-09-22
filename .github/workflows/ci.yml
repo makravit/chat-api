@@ -32,7 +32,8 @@ jobs:
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
-          export PATH="$HOME/.local/bin:$PATH"
+          echo "POETRY_HOME=$HOME/.local" >> $GITHUB_ENV
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Set Poetry Python version
         run: |
@@ -63,9 +64,9 @@ jobs:
       - name: Run pre-commit checks (check-only, do not auto-fix)
         run: |
           poetry run pre-commit run --all-files --show-diff-on-failure --color=always
-      - name: Run tests
+      - name: Run tests (100% coverage)
         run: |
-          poetry run pytest --cov=app --cov-report=term-missing --cov-report=html tests/unit tests/integration
+          poetry run pytest --cov=app --cov-report=term-missing --cov-report=html --cov-fail-under=100 tests/unit tests/integration
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
@@ -91,6 +92,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push Docker image
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && env.REGISTRY != '' && env.IMAGE_NAME != '' }}
         uses: docker/build-push-action@v5
         with:
           context: .

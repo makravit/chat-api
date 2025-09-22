@@ -1,15 +1,13 @@
+"""User ORM model."""
 
-
-# Standard library imports
-
-# Third-party imports
 from sqlalchemy import Column, Integer, String
 
-# Local application imports
 from app.core.database import Base
 
 
 class User(Base):
+    """User account with credentials and profile data."""
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)

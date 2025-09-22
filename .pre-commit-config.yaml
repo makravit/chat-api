@@ -1,17 +1,49 @@
 repos:
+  # Core sanity checks and guardrails
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+      - id: check-ast
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+      - id: debug-statements
+      - id: detect-private-key
+      - id: check-added-large-files
+      - id: check-case-conflict
+
+  # Ruff: linter and formatter
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.4.4
+    rev: v0.13.1
     hooks:
       - id: ruff
-        args: []
-  - repo: https://github.com/PyCQA/isort
-    rev: 6.0.1
+        args: ["--fix"]
+      - id: ruff-format
+
+  # Validate and format pyproject.toml
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.24.1
     hooks:
-      - id: isort
-        args: ["--profile=black", "--check-only"]
+      - id: validate-pyproject
+  - repo: https://github.com/tox-dev/pyproject-fmt
+    rev: v2.6.0
+    hooks:
+      - id: pyproject-fmt
+
+  # Modernize Python syntax to configured minimum version
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.20.0
+    hooks:
+      - id: pyupgrade
+        args: ["--py312-plus"]
+
+  # Lint shell scripts
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck

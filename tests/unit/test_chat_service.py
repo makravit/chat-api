@@ -1,24 +1,23 @@
-
-# Standard library imports
+from typing import Any
 from unittest.mock import Mock
 
-# Third-party imports
 import pytest
 from pydantic import ValidationError
 
 from app.schemas.chat import ChatRequest
-
-# Local application imports
 from app.services.chat_service import process_chat
 
 
-@pytest.mark.parametrize("message,expected_error", [
-    ("Hello!", None),
-    ("   ", "empty"),
-    ("a" * 4097, "too long"),
-])
-def test_process_chat_cases(message, expected_error):
-    user = Mock()
+@pytest.mark.parametrize(
+    ("message", "expected_error"),
+    [
+        ("Hello!", None),
+        ("   ", "empty"),
+        ("a" * 4097, "too long"),
+    ],
+)
+def test_process_chat_cases(message: str, expected_error: str | None) -> None:
+    user: Any = Mock()
     if expected_error:
         with pytest.raises(ValidationError) as exc:
             ChatRequest(message=message)
