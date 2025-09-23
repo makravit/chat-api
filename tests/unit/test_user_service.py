@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
+from typing import TYPE_CHECKING, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -7,6 +8,9 @@ import pytest
 import app.core.config as cfg
 from app.core.auth import hash_password
 from app.core.exceptions import InvalidCredentialsError
+
+if TYPE_CHECKING:  # pragma: no cover - used for typing only
+    from app.models.user import User
 from app.services.user_service import (
     EmailAlreadyRegisteredError,
     authenticate_user,
@@ -102,7 +106,7 @@ def test_register_user_duplicate() -> None:
 
 # ---------- logout_single_session ----------
 def test_logout_single_session_revokes_token() -> None:
-    user = SimpleNamespace(id=1, email="logout@example.com")
+    user = cast("User", SimpleNamespace(id=1, email="logout@example.com"))
     token = SimpleNamespace(user_id=1, revoked=False)
     token_repo = MagicMock(get_valid_token=MagicMock(return_value=token))
     with patch(
@@ -118,7 +122,7 @@ def test_logout_single_session_revokes_token() -> None:
 
 
 def test_logout_single_session_revoked_token() -> None:
-    user = SimpleNamespace(id=1)
+    user = cast("User", SimpleNamespace(id=1))
     token_repo = MagicMock(
         get_valid_token=MagicMock(
             return_value=SimpleNamespace(user_id=1, revoked=True),
@@ -139,7 +143,7 @@ def test_logout_single_session_revoked_token() -> None:
 
 
 def test_logout_single_session_user_mismatch() -> None:
-    user = SimpleNamespace(id=2)
+    user = cast("User", SimpleNamespace(id=2))
     token_repo = MagicMock(
         get_valid_token=MagicMock(
             return_value=SimpleNamespace(user_id=1, revoked=False),
@@ -161,7 +165,7 @@ def test_logout_single_session_user_mismatch() -> None:
 
 # ---------- logout_all_sessions ----------
 def test_logout_all_sessions_calls_repo() -> None:
-    user = SimpleNamespace(id=99)
+    user = cast("User", SimpleNamespace(id=99))
     token_repo = MagicMock()
     with patch(
         "app.services.user_service.RefreshTokenRepository",

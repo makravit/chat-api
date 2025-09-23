@@ -281,6 +281,19 @@ poetry run ruff check .
 poetry run ruff format .
 ```
 
+### Type checking (Pyright)
+
+Pyright enforces static typing across `app/**` and `tests/**`.
+
+```sh
+poetry run pyright app tests
+```
+
+Conventions used in this repo:
+- Prefer `from __future__ import annotations` and modern typing (`|`, `list[T]`).
+- Place type-only imports under `if TYPE_CHECKING:` to satisfy Ruff’s `TCH` rules.
+- When a framework evaluates annotations at runtime (e.g., SQLAlchemy), ensure names referenced in annotations exist at runtime. For example, provide a runtime alias for modules used only in annotations, or add a targeted `# noqa: TCH003` if you choose a simpler import.
+
 
 ### Auto-fix code style issues
 
@@ -304,6 +317,8 @@ Install and run pre-commit hooks:
 poetry run pre-commit install
 poetry run pre-commit run --all-files
 ```
+
+Pre-commit runs Ruff, Pyright, and other checks. Fixes may be applied automatically by Ruff; re-run until all hooks pass.
 
 
 ### Suppress DeprecationWarnings during tests (optional)

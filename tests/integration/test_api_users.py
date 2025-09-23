@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -92,7 +93,7 @@ def test_register_duplicate_email(
 )
 def test_register_invalid_cases(
     client: TestClient,
-    payload: dict[str, object],
+    payload: dict[str, Any],
     expected_error: str | None,
 ) -> None:
     resp = client.post("/api/v1/users/register", json=payload)
@@ -292,7 +293,7 @@ def test_database_failure_on_login(
 
 def test_refresh_token_missing_cookie(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     tokens = login_and_get_tokens()
     headers = {
@@ -305,15 +306,17 @@ def test_refresh_token_missing_cookie(
 
 def test_refresh_token_success(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     tokens = login_and_get_tokens()
     assert tokens["refresh_token"]
+    rtok0 = tokens["refresh_token"]
+    assert isinstance(rtok0, str)
     # Use cookie for refresh
     resp = client.post(
         "/api/v1/users/refresh-token",
         cookies={
-            "refresh_token": tokens["refresh_token"],
+            "refresh_token": rtok0,
         },
     )
     assert resp.status_code == 200
@@ -323,24 +326,29 @@ def test_refresh_token_success(
     resp2 = client.post(
         "/api/v1/users/refresh-token",
         cookies={
-            "refresh_token": tokens["refresh_token"],
+            "refresh_token": rtok0,
         },
     )
     assert resp2.status_code == 401
     refresh_token = tokens["refresh_token"]
+    assert isinstance(refresh_token, str)
     for _ in range(5):
+        rt = refresh_token
+        assert isinstance(rt, str)
         resp = client.post(
             "/api/v1/users/refresh-token",
-            cookies={"refresh_token": refresh_token},
+            cookies={"refresh_token": rt},
         )
         assert resp.status_code in (200, 401)
         if resp.status_code == 200:
-            refresh_token = resp.cookies.get("refresh_token", refresh_token)
+            new_rt = resp.cookies.get("refresh_token") or rt
+            assert isinstance(new_rt, str)
+            refresh_token = new_rt
 
 
 def test_refresh_token_invalid(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     login_and_get_tokens()  # ensure a user exists
     resp = client.post(
@@ -353,7 +361,7 @@ def test_refresh_token_invalid(
 
 def test_refresh_token_revoked_usage(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     """Using a revoked refresh token should return 401 Unauthorized."""
     tokens = login_and_get_tokens()
@@ -367,6 +375,7 @@ def test_refresh_token_revoked_usage(
     )
     # Use the latest refresh_token from logout response if set
     revoked_token = logout_resp.cookies.get("refresh_token", refresh_token)
+    assert isinstance(revoked_token, str)
     resp = client.post(
         "/api/v1/users/refresh-token",
         cookies={"refresh_token": revoked_token},
@@ -376,7 +385,7 @@ def test_refresh_token_revoked_usage(
 
 def test_refresh_token_sliding_expiration(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     """
     Refresh token rotates to a new cookie value on each success and allows
@@ -384,6 +393,7 @@ def test_refresh_token_sliding_expiration(
     """
     tokens = login_and_get_tokens()
     refresh_token = tokens["refresh_token"]
+    assert isinstance(refresh_token, str)
     token_values = [refresh_token]
     for _ in range(3):
         resp = client.post(
@@ -393,6 +403,7 @@ def test_refresh_token_sliding_expiration(
         assert resp.status_code == 200
         # A new refresh token should be issued each time
         new_refresh = resp.cookies.get("refresh_token", refresh_token)
+        assert isinstance(new_refresh, str)
         assert new_refresh != refresh_token
         refresh_token = new_refresh
     token_values.append(refresh_token)
@@ -401,12 +412,14 @@ def test_refresh_token_sliding_expiration(
 
 def test_refresh_sets_secure_refresh_cookie(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     tokens = login_and_get_tokens()
+    rtok = tokens["refresh_token"]
+    assert isinstance(rtok, str)
     resp = client.post(
         "/api/v1/users/refresh-token",
-        cookies={"refresh_token": tokens["refresh_token"]},
+        cookies={"refresh_token": rtok},
     )
     assert resp.status_code == 200
     set_cookie = resp.headers.get("set-cookie", "")
@@ -427,15 +440,19 @@ def test_refresh_token_rate_limiting(
         json={"email": user_data["email"], "password": user_data["password"]},
     )
     refresh_token = login.cookies.get("refresh_token")
-    assert refresh_token
+    assert isinstance(refresh_token, str)
     for _ in range(5):
+        rt = refresh_token
+        assert isinstance(rt, str)
         resp = client.post(
             "/api/v1/users/refresh-token",
-            cookies={"refresh_token": refresh_token},
+            cookies={"refresh_token": rt},
         )
         assert resp.status_code == 200 or resp.status_code == 401
         if resp.status_code == 200:
-            refresh_token = resp.cookies.get("refresh_token", refresh_token)
+            new_rt = resp.cookies.get("refresh_token") or rt
+            assert isinstance(new_rt, str)
+            refresh_token = new_rt
     resp = client.post(
         "/api/v1/users/refresh-token",
         cookies={"refresh_token": refresh_token},
@@ -463,9 +480,11 @@ def test_refresh_token_exception(
         raise InvalidCredentialsError(msg)
 
     monkeypatch.setattr(app.services.user_service, "rotate_refresh_token", raise_exc)
+    rtok = cookies.get("refresh_token")
+    assert isinstance(rtok, str)
     resp = client.post(
         "/api/v1/users/refresh-token",
-        cookies={"refresh_token": cookies["refresh_token"]},
+        cookies={"refresh_token": rtok},
     )
     assert resp.status_code == 401
     assert "invalid" in resp.json()["detail"].lower()
@@ -496,9 +515,11 @@ def test_refresh_token_generic_exception_returns_500(
         "rotate_refresh_token",
         raise_generic,
     )
+    rtok = cookies.get("refresh_token")
+    assert isinstance(rtok, str)
     resp = client.post(
         "/api/v1/users/refresh-token",
-        cookies={"refresh_token": cookies["refresh_token"]},
+        cookies={"refresh_token": rtok},
     )
     assert resp.status_code == 500
 
@@ -523,7 +544,7 @@ def test_login_access_token_claims_sub(
 
 def test_logout_missing_refresh_token(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     tokens = login_and_get_tokens()
     access_token = tokens["access_token"]
@@ -541,7 +562,7 @@ def test_logout_unauthenticated(client: TestClient) -> None:
 
 def test_logout_empty_refresh_cookie(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     tokens = login_and_get_tokens()
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
@@ -560,7 +581,7 @@ def test_logout_success(
     tokens = login_and_get_tokens()
     access_token = tokens["access_token"]
     refresh = tokens["refresh_token"]
-    assert refresh
+    assert isinstance(refresh, str)
     headers = {"Authorization": f"Bearer {access_token}"}
     resp = client.post(
         "/api/v1/users/logout",
@@ -586,10 +607,12 @@ def test_logout_sets_deleted_refresh_cookie(
 ) -> None:
     tokens = login_and_get_tokens()
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    rtok = tokens["refresh_token"]
+    assert isinstance(rtok, str)
     resp = client.post(
         "/api/v1/users/logout",
         headers=headers,
-        cookies={"refresh_token": tokens["refresh_token"]},
+        cookies={"refresh_token": rtok},
     )
     assert resp.status_code == 204
     set_cookie = resp.headers.get("set-cookie", "")
@@ -631,7 +654,7 @@ def test_logout_endpoint_valid_token_repo_revoked(
     def fake_get_valid_token(_self: object, _token: str) -> object:
         return SimpleNamespace(user_id=42, revoked=False)
 
-    called: dict[str, object] = {"token": None}
+    called: dict[str, Any] = {"token": None}
 
     def fake_revoke_token(_self: object, token: str) -> None:
         called["token"] = token
@@ -653,20 +676,22 @@ def test_logout_endpoint_valid_token_repo_revoked(
 
     main_app.dependency_overrides[get_current_user] = _override_current_user
     try:
+        rtok = tokens["refresh_token"]
+        assert isinstance(rtok, str)
         resp = client.post(
             "/api/v1/users/logout",
-            cookies={"refresh_token": tokens["refresh_token"]},
+            cookies={"refresh_token": rtok},
             headers=headers,
         )
         assert resp.status_code == 204
-        assert called["token"] == tokens["refresh_token"]
+        assert called["token"] == rtok
     finally:
         main_app.dependency_overrides.clear()
 
 
 def test_logout_exception_returns_401(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     tokens = login_and_get_tokens()
@@ -679,17 +704,19 @@ def test_logout_exception_returns_401(
         raise InvalidCredentialsError(msg)
 
     monkeypatch.setattr(app.services.user_service, "logout_single_session", boom)
+    rtok = tokens["refresh_token"]
+    assert isinstance(rtok, str)
     resp = client.post(
         "/api/v1/users/logout",
         headers=headers,
-        cookies={"refresh_token": tokens["refresh_token"]},
+        cookies={"refresh_token": rtok},
     )
     assert resp.status_code == 401
 
 
 def test_logout_generic_exception_returns_500(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Generic exceptions from logout_single_session should bubble to 500."""
@@ -704,10 +731,12 @@ def test_logout_generic_exception_returns_500(
         raise SimulatedUnexpectedError(msg)
 
     monkeypatch.setattr(app.services.user_service, "logout_single_session", boom)
+    rtok = tokens["refresh_token"]
+    assert isinstance(rtok, str)
     resp = client.post(
         "/api/v1/users/logout",
         headers=headers,
-        cookies={"refresh_token": tokens["refresh_token"]},
+        cookies={"refresh_token": rtok},
     )
     assert resp.status_code == 500
 
@@ -727,6 +756,7 @@ def test_logout_cookie_belongs_to_other_user(
         json={"email": a["email"], "password": a["password"]},
     )
     cookie_a = login_a.cookies.get("refresh_token")
+    assert isinstance(cookie_a, str)
     # User B
     b = {
         "name": "B",
@@ -759,6 +789,7 @@ def test_refresh_access_token_claims_sub(
         json={"email": user_data["email"], "password": user_data["password"]},
     )
     rtok = login.cookies.get("refresh_token")
+    assert isinstance(rtok, str)
     resp = client.post(
         "/api/v1/users/refresh-token",
         cookies={"refresh_token": rtok},
@@ -774,7 +805,7 @@ def test_refresh_access_token_claims_sub(
 
 def test_logout_all_endpoint(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     tokens = login_and_get_tokens()
@@ -797,7 +828,7 @@ def test_logout_all_endpoint(
 
 def test_logout_all_clears_refresh_cookie(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     tokens = login_and_get_tokens()
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
@@ -878,7 +909,11 @@ def test_get_me_deleted_user_returns_401(
     db_session: Session,
 ) -> None:
     tokens = login_and_get_tokens()
-    email = tokens["user_data"]["email"]
+    user_data_obj = tokens.get("user_data")
+    assert isinstance(user_data_obj, dict)
+    email_obj = user_data_obj.get("email")
+    assert isinstance(email_obj, str)
+    email = email_obj
     # Delete the user directly in the DB to simulate a stale token
     user = db_session.query(User).filter(User.email == email).first()
     assert user is not None

@@ -44,11 +44,12 @@ When adding new endpoints or features:
 - Ensure CI/CD checks pass before merging or deploying
 
 ## Tooling & Workflow
-- Use `ruff` for linting and code style
-- Let Ruff manage import sorting (enable isort rules via Ruff)
-- Use Poetry for dependency management
-- Use Alembic for database migrations
-- Use Docker for local development and deployment
+ - Use `ruff` for linting and code style
+ - Let Ruff manage import sorting (enable isort rules via Ruff)
+ - Use Poetry for dependency management
+ - Use Alembic for database migrations
+ - Use Docker for local development and deployment
+ - Use Pyright for static type checking across `app/**` and `tests/**`
 
 ### Linting, formatting, and static analysis (Ruff)
 The project’s canonical style and checks are enforced by Ruff (configured in `pyproject.toml`). Key rules and conventions you must follow when adding or modifying code:
@@ -56,11 +57,12 @@ The project’s canonical style and checks are enforced by Ruff (configured in `
 - Python version and formatting
 	- Target Python 3.13 for lint semantics (`target-version = py313`).
 	- Line length 88. Use double quotes and spaces for indentation.
-	- Imports are sorted by Ruff’s isort rules; combine `as` imports; first-party is `app`.
 	- Prefer absolute imports and tidy import style. Relative imports are banned (flake8-tidy-imports).
-
+	- Pyright is enforced; prefer modern typing and `from __future__ import annotations`.
+	- Place type-only imports under `if TYPE_CHECKING:` to satisfy `TCH` rules. If a framework evaluates annotations at runtime (e.g., SQLAlchemy), ensure referenced names exist at runtime (e.g., provide a runtime alias or use a targeted `# noqa: TCH003`).
 - Docstrings and documentation
 	- Google-style docstrings are required for modules, functions, classes, and methods under `app/**`.
+	- Pyright must pass with zero errors locally and in CI.
 	- Docstrings are not required in tests (`tests/**`) and small helper scripts (`scripts/**`).
 
 - Security and secrets
@@ -106,6 +108,7 @@ Run locally:
 poetry run pre-commit run --all-files
 poetry run ruff check .
 poetry run ruff format .
+poetry run pyright app tests
 ```
 
 CI and local development both expect 100% test coverage. Keep code changes small and tested.

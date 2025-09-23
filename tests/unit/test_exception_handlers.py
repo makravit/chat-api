@@ -19,6 +19,7 @@ pytestmark = pytest.mark.asyncio
         (EmailAlreadyRegisteredError("Email exists!"), 409, "Email exists!"),
         (InvalidCredentialsError("Bad creds!"), 401, "Bad creds!"),
         (AppError("Generic error!"), 500, "Generic error!"),
+        (Exception("Unexpected!"), 500, "Unexpected!"),
     ],
 )
 async def test_app_exception_handler(
@@ -30,4 +31,5 @@ async def test_app_exception_handler(
     response = await app_exception_handler(req, exc)
     assert response.status_code == expected_status
     assert response.body
-    assert expected_detail in response.body.decode()
+    body_bytes = bytes(response.body)
+    assert expected_detail in body_bytes.decode()

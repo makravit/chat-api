@@ -6,7 +6,7 @@ metrics endpoint.
 """
 
 import secrets
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
@@ -37,7 +37,7 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_access_token(data: dict) -> str:
+def create_access_token(data: Mapping[str, object]) -> str:
     """Create a signed JWT access token with expiration.
 
     Args:
@@ -46,7 +46,8 @@ def create_access_token(data: dict) -> str:
     Returns:
         Encoded JWT string.
     """
-    to_encode = data.copy()
+    # Ensure we operate on a concrete dict for mutation regardless of Mapping type
+    to_encode: dict[str, object] = dict(data)
     expire = datetime.now(UTC) + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -75,9 +76,10 @@ def get_current_user(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
+        email_value = payload.get("sub")
+        if not isinstance(email_value, str):
             raise credentials_exception
+        email: str = email_value
     except JWTError:
         raise credentials_exception from None
     user = db.query(User).filter(User.email == email).first()

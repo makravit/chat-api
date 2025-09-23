@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/pyright/main/packages/pyright/schema/pyrightconfig.schema.json",
+  "include": [
+    "app",
+    "tests"
+  ],
+  "exclude": [
+    "alembic",
+    "htmlcov",
+    ".venv",
+    ".mypy_cache",
+    ".pytest_cache"
+  ],
+  "pythonVersion": "3.13",
+  "typeCheckingMode": "basic",
+  "useLibraryCodeForTypes": true,
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": "none",
+  "reportMissingTypeArgument": true
+}

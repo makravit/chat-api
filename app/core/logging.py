@@ -29,7 +29,7 @@ structlog.configure(
 logger = structlog.get_logger()
 
 
-def mask_token(token: str | None) -> str | None:
+def mask_token(token: object | None) -> str | None:
     """Return a short, non-sensitive fingerprint for a secret token.
 
     Examples:
@@ -40,9 +40,11 @@ def mask_token(token: str | None) -> str | None:
     if token is None:
         return None
     try:
-        length = len(token)
+        length = len(token)  # type: ignore[arg-type]
     except TypeError:
         return "***"
     if length <= 8:
         return "*" * length
-    return f"{token[:4]}...{token[-4:]}"
+    # token could be any object with __len__ and slicing; coerce to str for fingerprint
+    token_str = str(token)
+    return f"{token_str[:4]}...{token_str[-4:]}"

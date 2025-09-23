@@ -61,7 +61,7 @@ def test_get_current_user_invalid_token(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_get_current_user_missing_sub(monkeypatch: pytest.MonkeyPatch) -> None:
-    def decode(_token: str, _key: str, **_kwargs: object) -> dict:
+    def decode(_token: str, _key: str, **_kwargs: object) -> dict[str, object]:
         return {}
 
     monkeypatch.setattr("app.core.auth.jwt.decode", decode)
@@ -72,7 +72,7 @@ def test_get_current_user_missing_sub(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_get_current_user_user_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    def decode(_token: str, _key: str, **_kwargs: object) -> dict:
+    def decode(_token: str, _key: str, **_kwargs: object) -> dict[str, object]:
         return {"sub": "foo@example.com"}
 
     monkeypatch.setattr("app.core.auth.jwt.decode", decode)

@@ -1,4 +1,5 @@
 from collections.abc import Callable, Generator
+from typing import Any
 
 import pytest
 from alembic.config import Config
@@ -76,8 +77,8 @@ def user_data() -> dict[str, str]:
 def login_and_get_tokens(
     client: TestClient,
     user_data: dict[str, str],
-) -> Callable[[dict[str, str] | None], dict[str, object]]:
-    def _do_login(ud: dict[str, str] | None = None) -> dict[str, object]:
+) -> Callable[[dict[str, str] | None], dict[str, Any]]:
+    def _do_login(ud: dict[str, str] | None = None) -> dict[str, Any]:
         data = ud or user_data
         reg = client.post("/api/v1/users/register", json=data)
         assert reg.status_code in (201, 409)

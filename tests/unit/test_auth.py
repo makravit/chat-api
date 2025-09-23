@@ -3,7 +3,7 @@ import datetime
 import pytest
 from fastapi import HTTPException, status
 from fastapi.security import HTTPBasicCredentials
-from jose import ExpiredSignatureError, jwt
+from jose import ExpiredSignatureError, JWTError, jwt
 
 from app.core.auth import (
     basic_auth_guard,
@@ -51,7 +51,7 @@ def test_invalid_signature() -> None:
     token = create_access_token(data)
     # Tamper with token
     tampered = token + "abc"
-    with pytest.raises(jwt.JWTError):
+    with pytest.raises(JWTError):
         jwt.decode(tampered, SECRET_KEY, algorithms=[ALGORITHM])
 
 

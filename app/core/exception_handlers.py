@@ -11,7 +11,7 @@ from app.core.exceptions import (
 from app.core.logging import logger
 
 
-async def app_exception_handler(request: Request, exc: AppError) -> Response:
+async def app_exception_handler(request: Request, exc: Exception) -> Response:
     """Handle AppError and map it to an appropriate HTTP response.
 
     Logs the error with structured context and returns a JSON body containing
@@ -24,6 +24,10 @@ async def app_exception_handler(request: Request, exc: AppError) -> Response:
     elif isinstance(exc, InvalidCredentialsError):
         status_code = 401
         log_func = logger.warning
+    elif isinstance(exc, AppError):
+        # Other AppError subclasses
+        status_code = 500
+        log_func = logger.error
     else:
         status_code = 500
         log_func = logger.error

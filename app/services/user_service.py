@@ -1,17 +1,23 @@
 """User-related business logic for registration, auth, and sessions."""
 
+from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
 from secrets import token_urlsafe
-
-from sqlalchemy.orm import Session
+from typing import TYPE_CHECKING, cast
 
 from app.core.auth import create_access_token, hash_password, verify_password
 from app.core.config import settings
 from app.core.exceptions import EmailAlreadyRegisteredError, InvalidCredentialsError
 from app.core.logging import logger, mask_token
-from app.models.user import User
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.user_repository import UserRepository
+
+if TYPE_CHECKING:  # pragma: no cover - types only
+    from sqlalchemy.orm import Session
+
+    from app.models.refresh_token import RefreshToken
+    from app.models.user import User
 
 
 def register_user(name: str, email: str, password: str, db: Session) -> User:
@@ -149,7 +155,9 @@ def logout_all_sessions(current_user: User, db: Session) -> None:
 
 
 # Helper functions for token validation and anomaly detection
-def _validate_refresh_token(token_obj: object, token: str, now: datetime) -> None:
+def _validate_refresh_token(
+    token_obj: RefreshToken | None, token: str, now: datetime
+) -> None:
     """Validate refresh token object and raise if invalid/expired/revoked."""
     if not token_obj:
         logger.warning(
@@ -194,7 +202,7 @@ def _validate_refresh_token(token_obj: object, token: str, now: datetime) -> Non
 
 
 def _detect_anomalies(
-    token_obj: object,
+    token_obj: RefreshToken,
     token: str,
     user_agent: str | None = None,
     ip_address: str | None = None,
@@ -268,17 +276,19 @@ def rotate_refresh_token(
     token_obj = token_repo.get_valid_token(old_refresh_token)
     now = datetime.now(UTC)
     _validate_refresh_token(token_obj, old_refresh_token, now)
-    _detect_anomalies(token_obj, old_refresh_token, user_agent, ip_address)
+    # token_obj is validated to be not None by _validate_refresh_token
+    token_typed = cast("RefreshToken", token_obj)
+    _detect_anomalies(token_typed, old_refresh_token, user_agent, ip_address)
     # Revoke old token (single-use)
     token_repo.revoke_token(old_refresh_token)
     log_refresh_token_event(
         event_type="rotate",
-        user_id=token_obj.user_id,
+        user_id=token_typed.user_id,
         token=mask_token(old_refresh_token),
         user_agent=user_agent,
         ip_address=ip_address,
     )
-    user_id = token_obj.user_id
+    user_id = token_typed.user_id
     user_repo = UserRepository(db)
     db_user = user_repo.get_by_id(user_id)
     if not db_user:
@@ -300,7 +310,7 @@ def rotate_refresh_token(
     refresh_expiry_days = settings.REFRESH_TOKEN_EXPIRE_DAYS
     max_lifetime_days = settings.REFRESH_TOKEN_MAX_LIFETIME_DAYS
     # Calculate max expiry from original token creation
-    max_expiry = token_obj.created_at + timedelta(days=max_lifetime_days)
+    max_expiry = token_typed.created_at + timedelta(days=max_lifetime_days)
     # Calculate new expiry (sliding window)
     requested_expiry = now + timedelta(days=refresh_expiry_days)
     new_expiry = min(requested_expiry, max_expiry)
@@ -329,11 +339,11 @@ def rotate_refresh_token(
 
 def log_refresh_token_event(
     event_type: str,
-    user_id: int = None,
-    token: str = None,
-    user_agent: str = None,
-    ip_address: str = None,
-    details: dict = None,
+    user_id: int | None = None,
+    token: str | None = None,
+    user_agent: str | None = None,
+    ip_address: str | None = None,
+    details: dict[str, object] | None = None,
 ) -> None:
     """Log refresh token events for auditing and security.
 

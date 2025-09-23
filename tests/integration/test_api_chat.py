@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,7 +11,7 @@ from app.main import app as main_app
 
 def test_chat_happy_path(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     token = login_and_get_tokens()["access_token"]
     resp = client.post(
@@ -24,7 +25,7 @@ def test_chat_happy_path(
 
 def test_chat_non_hello_message(
     client: TestClient,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     token = login_and_get_tokens()["access_token"]
     resp = client.post(
@@ -93,9 +94,9 @@ def test_chat_token_nonexistent_user(client: TestClient) -> None:
 )
 def test_chat_invalid_cases(
     client: TestClient,
-    payload: dict[str, object],
+    payload: dict[str, Any],
     expected_error: str | None,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     token = login_and_get_tokens()["access_token"]
     resp = client.post(
@@ -113,7 +114,7 @@ def test_chat_invalid_cases(
 
 def test_chat_service_exception(
     monkeypatch: pytest.MonkeyPatch,
-    login_and_get_tokens: Callable[[], dict[str, object]],
+    login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     token = login_and_get_tokens()["access_token"]
 

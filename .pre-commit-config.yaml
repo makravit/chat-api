@@ -47,3 +47,13 @@ repos:
     rev: v0.11.0.1
     hooks:
       - id: shellcheck
+
+  # Static type checking with Pyright (use Poetry-managed version)
+  - repo: local
+    hooks:
+      - id: pyright
+        name: pyright
+        entry: poetry run pyright
+        language: system
+        pass_filenames: false
+        types: [python]
