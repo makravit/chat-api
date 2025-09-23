@@ -64,3 +64,22 @@ class LogoutOperationError(AppError):
             message: Human-readable description of the failure.
         """
         super().__init__(message)
+
+
+class LogoutNoSessionError(AppError):
+    """Raised when a logout request has no usable session/token.
+
+    This signals idempotent logout behavior: the API should respond with 204
+    No Content and clear the refresh cookie, without treating it as an error.
+    """
+
+    def __init__(
+        self: "LogoutNoSessionError",
+        message: str = "No active session or already logged out.",
+    ) -> None:
+        """Initialize a LogoutNoSessionError with an optional message.
+
+        Args:
+            message: Human-readable description of the condition.
+        """
+        super().__init__(message)

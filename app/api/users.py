@@ -6,13 +6,13 @@ rotation and sliding expiration, and logout flows.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.exceptions import InvalidCredentialsError, LogoutOperationError
+from app.core.exceptions import InvalidCredentialsError, LogoutNoSessionError
 from app.core.logging import logger
 from app.models.user import User
 from app.schemas.user import TokenResponse, UserLogin, UserRegister, UserResponse
@@ -63,6 +63,32 @@ def _clear_refresh_cookie(response: Response) -> None:
         secure=True,
         samesite="strict",
     )
+
+
+# Dependencies to extract refresh cookie with specific error semantics
+def require_refresh_cookie_for_refresh(request: Request) -> str:
+    """Return refresh cookie for refresh flow or raise InvalidCredentialsError.
+
+    The refresh flow should respond with 401 when a usable token is not present.
+    """
+    token = _get_refresh_cookie(request)
+    if not token:
+        logger.warning("Refresh token failed: missing token")
+        raise InvalidCredentialsError(REFRESH_INVALID_MSG)
+    return token
+
+
+def require_refresh_cookie_for_logout(request: Request) -> str:
+    """Return refresh cookie for logout, or raise LogoutNoSessionError.
+
+    The logout flow is idempotent and should return 204 when no usable token
+    is present.
+    """
+    token = _get_refresh_cookie(request)
+    if not token:
+        logger.warning("Logout: no refresh token cookie found")
+        raise LogoutNoSessionError(LOGOUT_GENERIC_MSG)
+    return token
 
 
 @router.post(
@@ -144,6 +170,7 @@ def refresh_token(
     request: Request,
     response: Response,
     db: Annotated[Session, Depends(get_db)],
+    refresh_cookie: Annotated[str, Depends(require_refresh_cookie_for_refresh)],
 ) -> TokenResponse:
     """Refresh the access token using a valid refresh token.
 
@@ -152,24 +179,15 @@ def refresh_token(
     """
     user_agent = request.headers.get("user-agent")
     ip_address = request.client.host if request.client else None
-    refresh_token_value = _get_refresh_cookie(request)
-    if not refresh_token_value:
-        logger.warning("Refresh token failed: missing token")
-        raise HTTPException(status_code=401, detail=REFRESH_INVALID_MSG)
-    try:
-        access_token, new_refresh_token = user_service.rotate_refresh_token(
-            refresh_token_value,
-            db,
-            user_agent=user_agent,
-            ip_address=ip_address,
-        )
-    except InvalidCredentialsError as e:
-        logger.warning("Refresh token failed", error=str(e))
-        raise HTTPException(status_code=401, detail=REFRESH_INVALID_MSG) from None
-    else:
-        logger.info("Refresh token rotated")
-        _set_refresh_cookie(response, new_refresh_token)
-        return TokenResponse(access_token=access_token)
+    access_token, new_refresh_token = user_service.rotate_refresh_token(
+        refresh_cookie,
+        db,
+        user_agent=user_agent,
+        ip_address=ip_address,
+    )
+    logger.info("Refresh token rotated")
+    _set_refresh_cookie(response, new_refresh_token)
+    return TokenResponse(access_token=access_token)
 
 
 @router.post(
@@ -182,46 +200,27 @@ def refresh_token(
     """,
 )
 def logout(
-    request: Request,
     response: Response,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
+    refresh_cookie: Annotated[str, Depends(require_refresh_cookie_for_logout)],
 ) -> None:
     """Logout the authenticated user and revoke their refresh token.
 
     Idempotent: returns 204 even if the refresh cookie is missing/invalid.
     """
-    refresh_token_value = _get_refresh_cookie(request)
-    if not refresh_token_value:
-        logger.warning(
-            "Logout: no refresh token cookie found",
-            user_id=current_user.id,
-            email=current_user.email,
-        )
-        _clear_refresh_cookie(response)
-        return
     try:
         user_service.logout_single_session(
             current_user,
             db,
-            refresh_token=refresh_token_value,
+            refresh_token=refresh_cookie,
         )
-    except InvalidCredentialsError as e:
-        # Treat invalid/expired tokens as already logged-out.
-        logger.warning(
-            "Logout: invalid refresh token treated as logged-out",
-            user_id=current_user.id,
-            email=current_user.email,
-            error=str(e),
-        )
-    except LogoutOperationError as e:
-        # Idempotent behavior: unexpected logout errors still result in 204.
-        logger.exception(
-            "Logout: unexpected error treated as logged-out",
-            user_id=current_user.id,
-            email=current_user.email,
-            error=str(e),
-        )
+    except InvalidCredentialsError as exc:
+        # Map credential-style failures in logout to idempotent semantics.
+        # This avoids requiring path-based logic in the global handler and keeps
+        # endpoint behavior consistent (204) even if the service raises a
+        # more generic error type in this context.
+        raise LogoutNoSessionError(str(exc)) from exc
     logger.info(
         "User logged out",
         user_id=current_user.id,

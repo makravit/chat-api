@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.exceptions import (
     EmailAlreadyRegisteredError,
     InvalidCredentialsError,
+    LogoutNoSessionError,
     LogoutOperationError,
 )
 from app.core.logging import logger, mask_token
@@ -128,7 +129,7 @@ def logout_single_session(current_user: User, db: Session, refresh_token: str) -
             details={"reason": "invalid or revoked token used for logout"},
         )
         msg = "No active session or already logged out."
-        raise InvalidCredentialsError(msg)
+        raise LogoutNoSessionError(msg)
     if token_obj.user_id != current_user.id:
         logger.warning(
             "Suspicious activity: refresh token user mismatch on logout",
@@ -142,7 +143,7 @@ def logout_single_session(current_user: User, db: Session, refresh_token: str) -
             details={"reason": "refresh token user mismatch on logout"},
         )
         msg = "No active session or already logged out."
-        raise InvalidCredentialsError(msg)
+        raise LogoutNoSessionError(msg)
     if token_obj.revoked:
         logger.warning(
             "Suspicious activity: revoked refresh token used for logout",
@@ -156,7 +157,7 @@ def logout_single_session(current_user: User, db: Session, refresh_token: str) -
             details={"reason": "revoked token used for logout"},
         )
         msg = "No active session or already logged out."
-        raise InvalidCredentialsError(msg)
+        raise LogoutNoSessionError(msg)
     try:
         token_repo.revoke_token(refresh_token)
     except SQLAlchemyError as exc:

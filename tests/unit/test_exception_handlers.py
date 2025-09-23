@@ -12,6 +12,8 @@ from app.core.exceptions import (
     AppError,
     EmailAlreadyRegisteredError,
     InvalidCredentialsError,
+    LogoutNoSessionError,
+    LogoutOperationError,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -72,3 +74,22 @@ async def test_unhandled_exception_handler_returns_500() -> None:
     body = bytes(response.body).decode()
     assert "Internal server error" in body
     assert '"code"' in body
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "exc",
+    [LogoutNoSessionError("No session"), LogoutOperationError("Op fail")],
+)
+async def test_app_exception_handler_logout_variants_return_204_and_clear_cookie(
+    exc: Exception,
+) -> None:
+    req = MagicMock()
+    response = await app_exception_handler(req, exc)
+    assert response.status_code == 204
+    # Starlette's delete_cookie sets a Set-Cookie header with max-age=0
+    # on the Response; ensure the refresh cookie is being cleared.
+    headers = getattr(response, "headers", {})
+    set_cookie = headers.get("set-cookie", "")
+    assert "refresh_token=" in set_cookie.lower()
+    assert "max-age=0" in set_cookie.lower()

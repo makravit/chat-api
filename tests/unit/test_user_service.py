@@ -9,7 +9,11 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import app.core.config as cfg
 from app.core.auth import ALGORITHM, SECRET_KEY, hash_password
-from app.core.exceptions import InvalidCredentialsError, LogoutOperationError
+from app.core.exceptions import (
+    InvalidCredentialsError,
+    LogoutNoSessionError,
+    LogoutOperationError,
+)
 
 if TYPE_CHECKING:  # pragma: no cover - used for typing only
     from app.models.user import User
@@ -150,7 +154,7 @@ def test_logout_single_session_revoked_token() -> None:
             "app.services.user_service.RefreshTokenRepository",
             return_value=token_repo,
         ),
-        pytest.raises(InvalidCredentialsError),
+        pytest.raises(LogoutNoSessionError),
     ):
         logout_single_session(
             user,
@@ -171,7 +175,7 @@ def test_logout_single_session_user_mismatch() -> None:
             "app.services.user_service.RefreshTokenRepository",
             return_value=token_repo,
         ),
-        pytest.raises(InvalidCredentialsError),
+        pytest.raises(LogoutNoSessionError),
     ):
         logout_single_session(
             user,
