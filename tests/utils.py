@@ -8,14 +8,14 @@ Public string helpers:
 - ``join_parts(*parts)`` — join parts to create deterministic test strings.
 - ``build_password(kind)`` — return canonical passwords for validation cases.
 
-Supported password kinds: "valid", "wrong", "short", "weak",
-"missing_symbol", "missing_number".
+Supported password kinds (enum ``PasswordKind``): VALID, WRONG, SHORT, WEAK,
+MISSING_SYMBOL, MISSING_NUMBER.
 
 Use these helpers to generate repeatable, non-secret values in tests.
 """
 
 from collections.abc import Sequence
-from typing import Literal
+from enum import Enum
 from unittest.mock import MagicMock
 
 
@@ -72,35 +72,35 @@ def join_parts(*parts: str) -> str:
     return "".join(list(parts))
 
 
-def build_password(
-    kind: Literal[
-        "valid",
-        "wrong",
-        "short",
-        "weak",
-        "missing_symbol",
-        "missing_number",
-    ] = "valid",
-) -> str:
+class PasswordKind(str, Enum):
+    """Password variants for tests."""
+
+    VALID = "valid"
+    WRONG = "wrong"
+    SHORT = "short"
+    WEAK = "weak"
+    MISSING_SYMBOL = "missing_symbol"
+    MISSING_NUMBER = "missing_number"
+
+
+def build_password(kind: PasswordKind = PasswordKind.VALID) -> str:
     """Return a deterministic password for the requested ``kind``.
 
-    See the module docstring for the supported kinds.
+    See ``PasswordKind`` for the supported kinds.
     """
     match kind:
-        case "valid":
+        case PasswordKind.VALID:
             return join_parts("Password", "1!")
-        case "wrong":
+        case PasswordKind.WRONG:
             return join_parts("WrongPass", "1!")
-        case "short":
+        case PasswordKind.SHORT:
             return join_parts("Short", "1!")
-        case "weak":
+        case PasswordKind.WEAK:
             return join_parts("password", "123")
-        case "missing_symbol":
+        case PasswordKind.MISSING_SYMBOL:
             return join_parts("Password", "1")
-        case "missing_number":
+        case PasswordKind.MISSING_NUMBER:
             return join_parts("Password", "!")
-        case _:
-            return join_parts("Password", "1!")
 
 
 # --- Cookie assertion helpers (integration tests) ---

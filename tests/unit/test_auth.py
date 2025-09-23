@@ -12,14 +12,14 @@ from app.core.auth import (
     verify_password,
 )
 from app.core.config import settings
-from tests.utils import build_password, join_parts
+from tests.utils import PasswordKind, build_password, join_parts
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 
 
 def test_hash_and_verify_password() -> None:
-    pw = build_password("valid")
+    pw = build_password(PasswordKind.VALID)
     hashed = hash_password(pw)
     assert hashed != pw
     assert verify_password(pw, hashed)

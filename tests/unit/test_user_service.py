@@ -21,7 +21,7 @@ from app.services.user_service import (
     register_user,
     rotate_refresh_token,
 )
-from tests.utils import build_password, join_parts, make_dummy_db
+from tests.utils import PasswordKind, build_password, join_parts, make_dummy_db
 
 
 # ---------- access token helper ----------
@@ -37,7 +37,7 @@ def test_issue_access_token_includes_uid_and_sub() -> None:
 # ---------- authenticate_user ----------
 def test_authenticate_user_success() -> None:
     email = "test@example.com"
-    password = build_password("valid")
+    password = build_password(PasswordKind.VALID)
     db_user = MagicMock(email=email, hashed_password=hash_password(password), id=1)
     repo_mock = MagicMock(get_by_email=MagicMock(return_value=db_user))
     token_repo_mock = MagicMock()
@@ -68,7 +68,7 @@ def test_authenticate_user_wrong_password() -> None:
         get_by_email=MagicMock(
             return_value=MagicMock(
                 email=email,
-                hashed_password=hash_password(build_password("valid")),
+                hashed_password=hash_password(build_password(PasswordKind.VALID)),
                 id=1,
             ),
         ),
@@ -77,7 +77,7 @@ def test_authenticate_user_wrong_password() -> None:
         patch("app.services.user_service.UserRepository", return_value=repo_mock),
         pytest.raises(InvalidCredentialsError),
     ):
-        authenticate_user(email, build_password("wrong"), make_dummy_db())
+        authenticate_user(email, build_password(PasswordKind.WRONG), make_dummy_db())
 
 
 def test_authenticate_user_not_found() -> None:
@@ -86,12 +86,16 @@ def test_authenticate_user_not_found() -> None:
         patch("app.services.user_service.UserRepository", return_value=repo_mock),
         pytest.raises(InvalidCredentialsError),
     ):
-        authenticate_user("no@user", build_password("valid"), make_dummy_db())
+        authenticate_user(
+            "no@user",
+            build_password(PasswordKind.VALID),
+            make_dummy_db(),
+        )
 
 
 # ---------- register_user ----------
 def test_register_user_success() -> None:
-    name, email, pwd = "Test", "test@example.com", build_password("valid")
+    name, email, pwd = "Test", "test@example.com", build_password(PasswordKind.VALID)
     created = SimpleNamespace(id=1, name=name, email=email)
     repo_mock = MagicMock(
         get_by_email=MagicMock(return_value=None),
@@ -111,7 +115,7 @@ def test_register_user_duplicate() -> None:
         register_user(
             "Test",
             "dupe@example.com",
-            build_password("valid"),
+            build_password(PasswordKind.VALID),
             MagicMock(),
         )
 

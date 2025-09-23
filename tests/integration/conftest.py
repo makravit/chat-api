@@ -13,7 +13,7 @@ from alembic import command
 from app.core.config import settings
 from app.core.database import get_db
 from app.main import app
-from tests.utils import build_password
+from tests.utils import PasswordKind, build_password
 
 
 @pytest.fixture(autouse=True)
@@ -69,7 +69,7 @@ def user_data() -> dict[str, str]:
     return {
         "name": "Test User",
         "email": "testuser@example.com",
-        "password": build_password("valid"),
+        "password": build_password(PasswordKind.VALID),
     }
 
 

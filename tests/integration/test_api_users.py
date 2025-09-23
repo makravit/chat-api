@@ -14,6 +14,7 @@ from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from tests.utils import (
+    PasswordKind,
     assert_deleted_refresh_cookie,
     assert_secure_refresh_cookie,
     build_password,
@@ -30,7 +31,7 @@ def user_data() -> dict[str, str]:
     return {
         "name": "Test User",
         "email": "testuser@example.com",
-        "password": build_password("valid"),
+        "password": build_password(PasswordKind.VALID),
     }
 
 
@@ -68,7 +69,7 @@ def test_register_duplicate_email(
             {
                 "name": " ",
                 "email": "emptyname@example.com",
-                "password": build_password("valid"),
+                "password": build_password(PasswordKind.VALID),
             },
             "empty",
         ),
@@ -76,18 +77,18 @@ def test_register_duplicate_email(
             {
                 "name": "Short Pass",
                 "email": "shortpass@example.com",
-                "password": build_password("short"),
+                "password": build_password(PasswordKind.SHORT),
             },
             "at least 8",
         ),
         (
             {
                 "email": "no_name@example.com",
-                "password": build_password("valid"),
+                "password": build_password(PasswordKind.VALID),
             },
             None,
         ),
-        ({"name": "No Email", "password": build_password("valid")}, None),
+        ({"name": "No Email", "password": build_password(PasswordKind.VALID)}, None),
         ({"name": "No Password", "email": "nopassword@example.com"}, None),
     ],
 )
@@ -111,7 +112,7 @@ def test_register_invalid_email(client: TestClient) -> None:
         json={
             "name": "Invalid Email",
             "email": "not-an-email",
-            "password": build_password("valid"),
+            "password": build_password(PasswordKind.VALID),
         },
     )
     assert resp.status_code == 422
@@ -125,7 +126,7 @@ def test_register_duplicate_username(client: TestClient) -> None:
         json={
             "name": "DupUser",
             "email": "dupuser1@example.com",
-            "password": build_password("valid"),
+            "password": build_password(PasswordKind.VALID),
         },
     )
     assert resp.status_code == 201
@@ -135,7 +136,7 @@ def test_register_duplicate_username(client: TestClient) -> None:
         json={
             "name": "DupUser",
             "email": "dupuser2@example.com",
-            "password": build_password("valid"),
+            "password": build_password(PasswordKind.VALID),
         },
     )
     assert resp2.status_code == 201
@@ -147,7 +148,7 @@ def test_register_password_complexity(client: TestClient) -> None:
         json={
             "name": "NoComplex",
             "email": "nocomplex@example.com",
-            "password": build_password("weak"),
+            "password": build_password(PasswordKind.WEAK),
         },
     )
     assert resp.status_code == 422
@@ -204,7 +205,7 @@ def test_login_missing_fields(client: TestClient) -> None:
     # Missing email
     resp = client.post(
         "/api/v1/users/login",
-        json={"password": build_password("valid")},
+        json={"password": build_password(PasswordKind.VALID)},
     )
     assert resp.status_code == 422
     # Missing password
@@ -215,7 +216,7 @@ def test_login_missing_fields(client: TestClient) -> None:
 def test_login_invalid_email_format(client: TestClient) -> None:
     resp = client.post(
         "/api/v1/users/login",
-        json={"email": "not-an-email", "password": build_password("valid")},
+        json={"email": "not-an-email", "password": build_password(PasswordKind.VALID)},
     )
     assert resp.status_code == 422
 
@@ -225,7 +226,7 @@ def test_login_unregistered_email(client: TestClient) -> None:
         "/api/v1/users/login",
         json={
             "email": "doesnotexist@example.com",
-            "password": build_password("valid"),
+            "password": build_password(PasswordKind.VALID),
         },
     )
     assert resp.status_code == 401
@@ -236,12 +237,12 @@ def test_login_wrong_password(client: TestClient) -> None:
     user = {
         "name": "Test User",
         "email": "testwrongpass@example.com",
-        "password": build_password("valid"),
+        "password": build_password(PasswordKind.VALID),
     }
     client.post("/api/v1/users/register", json=user)
     resp = client.post(
         "/api/v1/users/login",
-        json={"email": user["email"], "password": build_password("wrong")},
+        json={"email": user["email"], "password": build_password(PasswordKind.WRONG)},
     )
     assert resp.status_code == 401
     assert "incorrect" in resp.json()["detail"]
@@ -748,7 +749,7 @@ def test_logout_cookie_belongs_to_other_user(
     a = {
         "name": "A",
         "email": "a@example.com",
-        "password": build_password("valid"),
+        "password": build_password(PasswordKind.VALID),
     }
     client.post("/api/v1/users/register", json=a)
     login_a = client.post(
@@ -761,7 +762,7 @@ def test_logout_cookie_belongs_to_other_user(
     b = {
         "name": "B",
         "email": "b@example.com",
-        "password": build_password("valid"),
+        "password": build_password(PasswordKind.VALID),
     }
     client.post("/api/v1/users/register", json=b)
     login_b = client.post(
@@ -851,7 +852,7 @@ def test_register_email_whitespace_normalization_integration(
     payload = {
         "name": "Trim",
         "email": "  trimme@example.com  ",
-        "password": build_password("valid"),
+        "password": build_password(PasswordKind.VALID),
     }
     reg = client.post("/api/v1/users/register", json=payload)
     assert reg.status_code == 201
@@ -861,7 +862,7 @@ def test_register_email_whitespace_normalization_integration(
         "/api/v1/users/login",
         json={
             "email": "\t trimme@example.com\n",
-            "password": build_password("valid"),
+            "password": build_password(PasswordKind.VALID),
         },
     )
     assert login.status_code == 200

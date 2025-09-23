@@ -1,11 +1,11 @@
 import pytest
 
 from app.schemas.user import UserLogin, UserRegister, validate_password_complexity
-from tests.utils import build_password
+from tests.utils import PasswordKind, build_password
 
 
 def test_validate_password_complexity_valid() -> None:
-    pw = build_password("valid")
+    pw = build_password(PasswordKind.VALID)
     assert validate_password_complexity(pw) == pw
 
 
@@ -23,13 +23,13 @@ def test_validate_password_complexity_too_short() -> None:
 
 def test_validate_password_complexity_missing_symbol() -> None:
     with pytest.raises(ValueError, match="must contain") as exc:
-        validate_password_complexity(build_password("missing_symbol"))
+        validate_password_complexity(build_password(PasswordKind.MISSING_SYMBOL))
     assert "must contain letters, numbers, and at least one symbol" in str(exc.value)
 
 
 def test_validate_password_complexity_missing_number() -> None:
     with pytest.raises(ValueError, match="must contain") as exc:
-        validate_password_complexity(build_password("missing_number"))
+        validate_password_complexity(build_password(PasswordKind.MISSING_NUMBER))
     assert "must contain letters, numbers, and at least one symbol" in str(exc.value)
 
 
@@ -40,7 +40,9 @@ def test_validate_password_complexity_missing_letter() -> None:
 
 
 def test_user_login_valid() -> None:
-    login = UserLogin(email="valid@example.com", password=build_password("valid"))
+    login = UserLogin(
+        email="valid@example.com", password=build_password(PasswordKind.VALID)
+    )
     assert login.email == "valid@example.com"
 
 
@@ -48,7 +50,7 @@ def test_user_register_valid() -> None:
     user = UserRegister(
         name="Valid User",
         email="valid@example.com",
-        password=build_password("valid"),
+        password=build_password(PasswordKind.VALID),
     )
     assert user.email == "valid@example.com"
 
@@ -57,13 +59,15 @@ def test_user_register_email_surrounded_whitespace_is_normalized() -> None:
     user = UserRegister(
         name="Trim Email",
         email="  trimmed@example.com  ",
-        password=build_password("valid"),
+        password=build_password(PasswordKind.VALID),
     )
     # Assert current behavior: surrounding whitespace is removed by the schema
     assert user.email == "trimmed@example.com"
 
 
 def test_user_login_email_surrounded_whitespace_is_normalized() -> None:
-    login = UserLogin(email="\t user@example.com \n", password=build_password("valid"))
+    login = UserLogin(
+        email="\t user@example.com \n", password=build_password(PasswordKind.VALID)
+    )
     # Assert current behavior: surrounding whitespace is removed by the schema
     assert login.email == "user@example.com"
