@@ -94,6 +94,21 @@ async def test_http_exception_handler_without_detail_returns_code_only() -> None
 
 
 @pytest.mark.asyncio
+async def test_http_exception_handler_unknown_status_includes_detail() -> None:
+    # Use a non-standard HTTP status (not in http.HTTPStatus) to trigger
+    # the ValueError path in _is_default_http_detail and ensure that
+    # the detail is included in the JSON response.
+    req = MagicMock()
+    exc = HTTPException(status_code=599, detail="Upstream timeout")
+    response = await http_exception_handler(req, exc)
+    assert response.status_code == 599
+    body = bytes(response.body).decode()
+    assert '"code"' in body
+    assert '"detail"' in body
+    assert "Upstream timeout" in body
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "handler_exc",
     [

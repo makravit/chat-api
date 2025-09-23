@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import InvalidCredentialsError, LogoutNoSessionError
 from app.core.logging import logger
+from app.core.request_utils import get_client_ip, get_user_agent
 from app.models.user import User
 from app.schemas.user import TokenResponse, UserLogin, UserRegister, UserResponse
 from app.services import user_service
@@ -177,8 +178,8 @@ def refresh_token(
     Rotates the refresh token with sliding expiration and sets the new value in
     a secure cookie.
     """
-    user_agent = request.headers.get("user-agent")
-    ip_address = request.client.host if request.client else None
+    user_agent = get_user_agent(request)
+    ip_address = get_client_ip(request)
     access_token, new_refresh_token = user_service.rotate_refresh_token(
         refresh_cookie,
         db,
