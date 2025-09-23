@@ -493,11 +493,15 @@ This API centralizes exception handling and returns a consistent error response 
   - `invalid_credentials` — 401 Unauthorized
   - `email_already_registered` — 409 Conflict
 - Framework-level `HTTPException`s are logged and returned with `code: "http_error"`.
+  - If the exception has a custom detail, the JSON includes both `detail` and `code`.
+  - If no custom detail is provided (i.e., `detail=None` or it equals the default HTTP status phrase such as "Unauthorized" for 401), the response omits `detail` and returns `{ "code": "http_error" }` only.
+  - Any headers on the exception (e.g., `WWW-Authenticate`) are preserved on the response.
 - Unhandled exceptions are logged and returned as 500 with `code: "internal_error"`.
 
 Logout specifics:
 - `/api/v1/users/logout` is idempotent. Missing/invalid/expired/used tokens do not cause a 401 response; the endpoint responds with `204 No Content` and clears the `refresh_token` cookie.
 - On `invalid_credentials` scenarios generally, the API proactively clears the `refresh_token` cookie to avoid leaving stale session state on the client.
+  - 204 responses return no body.
 
 
 ## Security Notes
@@ -539,6 +543,7 @@ Key production dependencies:
 - typing-extensions
 - structlog
 - alembic  # Alembic is now a production dependency for migrations
+- prometheus-client
 
 Key development dependencies:
 - cython
@@ -551,6 +556,7 @@ Key development dependencies:
 - setuptools
 - testcontainers[postgresql]
 - wheel
+- pyright
 
 
 ## Poetry & Docker builds

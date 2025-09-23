@@ -11,11 +11,19 @@ from starlette.responses import Response
 
 from app.api import chat, health, metrics, users
 from app.core.exception_handlers import (
-    app_exception_handler,
+    email_already_registered_handler,
     http_exception_handler,
+    invalid_credentials_handler,
+    logout_no_session_handler,
+    logout_operation_error_handler,
     unhandled_exception_handler,
 )
-from app.core.exceptions import AppError
+from app.core.exceptions import (
+    EmailAlreadyRegisteredError,
+    InvalidCredentialsError,
+    LogoutNoSessionError,
+    LogoutOperationError,
+)
 
 app = FastAPI(
     title="AI Chatbot API",
@@ -30,7 +38,19 @@ app.include_router(health.router, tags=["health"])
 app.include_router(metrics.router, tags=["metrics"])
 
 # Register global exception handlers (specific before generic)
-app.add_exception_handler(AppError, app_exception_handler)
+#
+# Rationale:
+# - Specific domain handlers map to precise status codes and side effects
+#   (e.g., refresh-cookie clearing on auth/logout).
+# - The single catch-all Exception handler is the final safety net for
+#   anything unclassified.
+# - Handlers accept `Exception` as their second parameter to satisfy FastAPI's
+#   `add_exception_handler` typing, even though they are registered for
+#   specific subclasses at runtime.
+app.add_exception_handler(EmailAlreadyRegisteredError, email_already_registered_handler)
+app.add_exception_handler(InvalidCredentialsError, invalid_credentials_handler)
+app.add_exception_handler(LogoutNoSessionError, logout_no_session_handler)
+app.add_exception_handler(LogoutOperationError, logout_operation_error_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 

@@ -556,6 +556,9 @@ def test_logout_missing_refresh_token(
     headers = {"Authorization": f"Bearer {access_token}"}
     resp = client.post("/api/v1/users/logout", headers=headers)
     assert resp.status_code == 204
+    set_cookie = resp.headers.get("set-cookie", "")
+    assert set_cookie
+    assert_deleted_refresh_cookie(set_cookie)
 
 
 def test_logout_unauthenticated(client: TestClient) -> None:
@@ -576,6 +579,9 @@ def test_logout_empty_refresh_cookie(
         cookies={"refresh_token": ""},
     )
     assert resp.status_code == 204
+    set_cookie = resp.headers.get("set-cookie", "")
+    assert set_cookie
+    assert_deleted_refresh_cookie(set_cookie)
 
 
 def test_logout_success(
@@ -638,6 +644,9 @@ def test_logout_endpoint_invalid_token(
         headers=headers,
     )
     assert resp.status_code == 204
+    set_cookie = resp.headers.get("set-cookie", "")
+    assert set_cookie
+    assert_deleted_refresh_cookie(set_cookie)
 
 
 def test_logout_endpoint_valid_token_repo_revoked(

@@ -1,19 +1,19 @@
 """Custom exception handlers for the FastAPI application.
 
 Provides handlers for:
-- AppError (domain/service errors)
 - HTTPException (framework-level errors raised by routes/dependencies)
 - Exception (catch-all for unexpected failures)
+- Specific AppError subclasses (domain/service errors)
 """
 
 from __future__ import annotations
+
+from http import HTTPStatus
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 
 from app.core.exceptions import (
-    AppError,
-    EmailAlreadyRegisteredError,
     InvalidCredentialsError,
     LogoutNoSessionError,
     LogoutOperationError,
@@ -37,62 +37,122 @@ def _get_path(request: Request) -> str:
     return str(getattr(request, "url", "unknown"))
 
 
-async def app_exception_handler(request: Request, exc: Exception) -> Response:
-    """Handle AppError and map it to an appropriate HTTP response.
+def _build_json_response(status_code: int, code: str, detail: str) -> JSONResponse:
+    """Create a JSONResponse with the project's standard error payload.
 
-    Logs the error with structured context and returns a JSON body containing
-    the error detail. Specific subclasses map to 401/409/204; otherwise 500.
+    Args:
+        status_code: HTTP status code to return.
+        code: Stable, machine-readable error code.
+        detail: Human-readable error detail.
+
+    Returns:
+        A JSONResponse containing the standardized error schema.
     """
-    path = _get_path(request)
-
-    # Map specific exceptions to status codes (with special-case for logout idempotency)
-    if isinstance(exc, EmailAlreadyRegisteredError):
-        status_code = 409
-        log_func = logger.warning
-        code = "email_already_registered"
-    elif isinstance(exc, InvalidCredentialsError):
-        # Standard auth failures map to 401.
-        status_code = 401
-        log_func = logger.warning
-        code = "invalid_credentials"
-    elif isinstance(exc, LogoutNoSessionError):
-        # Idempotent logout when no usable session/token
-        status_code = 204
-        log_func = logger.warning
-        code = "logout_no_session"
-    elif isinstance(exc, LogoutOperationError):
-        # Non-credential failures during logout should be idempotent
-        status_code = 204
-        log_func = logger.warning
-        code = "logout_operation_error"
-    elif isinstance(exc, AppError):
-        # Other AppError subclasses
-        status_code = 500
-        log_func = logger.error
-        code = "app_error"
-    else:
-        status_code = 500
-        log_func = logger.error
-        code = "app_error"
-    log_func(
-        "AppError handled",
-        exc_type=type(exc).__name__,
-        status_code=status_code,
-        detail=str(exc),
-        path=path,
+    return JSONResponse(
+        status_code=status_code, content={"detail": detail, "code": code}
     )
-    # Build response; 204 must not include a body
-    if status_code == 204:
-        response: Response = Response(status_code=204)
-    else:
-        response = JSONResponse(
-            status_code=status_code,
-            content={"detail": str(exc), "code": code},
-        )
-    # Proactively clear stale refresh cookie on credential/session failures.
+
+
+def _build_no_content_response() -> Response:
+    """Create an empty 204 No Content response."""
+    return Response(status_code=204)
+
+
+def _maybe_clear_refresh_cookie(response: Response, exc: Exception) -> None:
+    """Delete the refresh cookie for credential/session-related failures.
+
+    The cookie is cleared for InvalidCredentialsError and the two logout
+    idempotency exceptions to avoid retaining stale session state on the client.
+    """
     if isinstance(exc, _COOKIE_CLEAR_EXCS):
         response.delete_cookie(REFRESH_COOKIE_NAME, **_COOKIE_KW)
-    return response
+
+
+def _is_default_http_detail(status_code: int, detail: object) -> bool:
+    """Return True if the provided detail equals the default phrase for the code.
+
+    Starlette's HTTPException replaces ``None`` detail with the default HTTP
+    status phrase (e.g., 401 -> "Unauthorized"). In those cases, we treat this
+    as "no custom detail" and omit the detail from the JSON body to keep the
+    payload compact and stable.
+    """
+    try:
+        return str(detail) == HTTPStatus(status_code).phrase
+    except ValueError:
+        # Unknown/non-standard status code -> no default phrase known
+        return False
+
+
+async def email_already_registered_handler(
+    request: Request, exc: Exception
+) -> Response:
+    """Return 409 Conflict for duplicate email registration attempts."""
+    # FastAPI passes the specific subclass instance; accept Exception for typing.
+    logger.warning(
+        "AppError handled",
+        exc_type=type(exc).__name__,
+        status_code=409,
+        detail=str(exc),
+        path=_get_path(request),
+    )
+    return _build_json_response(409, "email_already_registered", str(exc))
+
+
+async def invalid_credentials_handler(request: Request, exc: Exception) -> Response:
+    """Return 401 Unauthorized for invalid credential scenarios.
+
+    Also clears the refresh cookie to prevent clients from reusing a bad token.
+    """
+    logger.warning(
+        "AppError handled",
+        exc_type=type(exc).__name__,
+        status_code=401,
+        detail=str(exc),
+        path=_get_path(request),
+    )
+    resp = _build_json_response(401, "invalid_credentials", str(exc))
+    _maybe_clear_refresh_cookie(resp, exc)
+    return resp
+
+
+async def logout_no_session_handler(request: Request, exc: Exception) -> Response:
+    """Return 204 No Content for idempotent logout with no active session.
+
+    Clears the refresh cookie to ensure client state is reset.
+    """
+    logger.warning(
+        "AppError handled",
+        exc_type=type(exc).__name__,
+        status_code=204,
+        detail=str(exc),
+        path=_get_path(request),
+    )
+    resp = _build_no_content_response()
+    _maybe_clear_refresh_cookie(resp, exc)
+    return resp
+
+
+async def logout_operation_error_handler(request: Request, exc: Exception) -> Response:
+    """Return 204 No Content for non-credential logout errors (idempotent).
+
+    Operational issues during logout should not break idempotency; the client
+    still receives a 204 and the refresh cookie is cleared.
+    """
+    logger.warning(
+        "AppError handled",
+        exc_type=type(exc).__name__,
+        status_code=204,
+        detail=str(exc),
+        path=_get_path(request),
+    )
+    resp = _build_no_content_response()
+    _maybe_clear_refresh_cookie(resp, exc)
+    return resp
+
+
+# Note: No separate generic AppError handler is registered at startup. The
+# catch-all Exception handler is registered for runtime. The dispatcher above
+# still returns 500 with detail for unit-test convenience.
 
 
 async def http_exception_handler(request: Request, exc: Exception) -> Response:
@@ -113,12 +173,18 @@ async def http_exception_handler(request: Request, exc: Exception) -> Response:
             detail=exc.detail,
             path=_get_path(request),
         )
-        content = (
-            {"detail": exc.detail, "code": "http_error"}
-            if exc.detail is not None
-            else {"code": "http_error"}
-        )
-        response = JSONResponse(status_code=exc.status_code, content=content)
+        # Preserve response shape: include detail only when it's explicitly set
+        # to something other than the default HTTP phrase that Starlette adds.
+        if exc.detail is not None and not _is_default_http_detail(
+            exc.status_code, exc.detail
+        ):
+            response = _build_json_response(
+                exc.status_code, "http_error", str(exc.detail)
+            )
+        else:
+            response = JSONResponse(
+                status_code=exc.status_code, content={"code": "http_error"}
+            )
         if exc.headers:
             response.headers.update(exc.headers)
         return response
@@ -128,10 +194,7 @@ async def http_exception_handler(request: Request, exc: Exception) -> Response:
         exc_type=type(exc).__name__,
         path=_get_path(request),
     )
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error.", "code": "internal_error"},
-    )
+    return _build_json_response(500, "internal_error", "Internal server error.")
 
 
 async def unhandled_exception_handler(request: Request, exc: Exception) -> Response:
@@ -151,7 +214,4 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> Respo
         exc_type=type(exc).__name__,
         path=_get_path(request),
     )
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error.", "code": "internal_error"},
-    )
+    return _build_json_response(500, "internal_error", "Internal server error.")

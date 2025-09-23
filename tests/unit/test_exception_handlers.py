@@ -1,15 +1,19 @@
+from collections.abc import Callable
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 from fastapi import HTTPException
 
 from app.core.exception_handlers import (
-    app_exception_handler,
+    email_already_registered_handler,
     http_exception_handler,
+    invalid_credentials_handler,
+    logout_no_session_handler,
+    logout_operation_error_handler,
     unhandled_exception_handler,
 )
 from app.core.exceptions import (
-    AppError,
     EmailAlreadyRegisteredError,
     InvalidCredentialsError,
     LogoutNoSessionError,
@@ -20,28 +24,27 @@ pytestmark = pytest.mark.asyncio
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("exc", "expected_status", "expected_detail"),
-    [
-        (EmailAlreadyRegisteredError("Email exists!"), 409, "Email exists!"),
-        (InvalidCredentialsError("Bad creds!"), 401, "Bad creds!"),
-        (AppError("Generic error!"), 500, "Generic error!"),
-        (Exception("Unexpected!"), 500, "Unexpected!"),
-    ],
-)
-async def test_app_exception_handler(
-    exc: Exception,
-    expected_status: int,
-    expected_detail: str,
-) -> None:
+async def test_email_already_registered_handler_returns_409() -> None:
     req = MagicMock()
-    response = await app_exception_handler(req, exc)
-    assert response.status_code == expected_status
-    assert response.body
+    exc = EmailAlreadyRegisteredError("Email exists!")
+    response = await email_already_registered_handler(req, exc)
+    assert response.status_code == 409
     body = bytes(response.body).decode()
-    assert expected_detail in body
-    # All errors include a machine-readable code
+    assert "Email exists!" in body
     assert '"code"' in body
+
+
+async def test_invalid_credentials_handler_returns_401_and_clears_cookie() -> None:
+    req = MagicMock()
+    exc = InvalidCredentialsError("Bad creds!")
+    response = await invalid_credentials_handler(req, exc)
+    assert response.status_code == 401
+    body = bytes(response.body).decode()
+    assert "Bad creds!" in body
+    assert '"code"' in body
+    set_cookie = response.headers.get("set-cookie", "").lower()
+    assert "refresh_token=" in set_cookie
+    assert "max-age=0" in set_cookie
 
 
 @pytest.mark.asyncio
@@ -77,19 +80,45 @@ async def test_unhandled_exception_handler_returns_500() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "exc",
-    [LogoutNoSessionError("No session"), LogoutOperationError("Op fail")],
-)
-async def test_app_exception_handler_logout_variants_return_204_and_clear_cookie(
-    exc: Exception,
-) -> None:
+async def test_http_exception_handler_without_detail_returns_code_only() -> None:
     req = MagicMock()
-    response = await app_exception_handler(req, exc)
+    exc = HTTPException(
+        status_code=401, detail=None, headers={"WWW-Authenticate": "Bearer"}
+    )
+    response = await http_exception_handler(req, exc)
+    assert response.status_code == 401
+    body = bytes(response.body).decode()
+    assert '"code"' in body
+    assert '"detail"' not in body
+    assert response.headers.get("WWW-Authenticate") == "Bearer"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "handler_exc",
+    [
+        (logout_no_session_handler, LogoutNoSessionError("No session")),
+        (logout_operation_error_handler, LogoutOperationError("Op fail")),
+    ],
+)
+async def test_logout_variants_return_204_and_clear_cookie(
+    handler_exc: tuple[Callable[..., Any], Exception],
+) -> None:
+    handler, exc = handler_exc
+    req = MagicMock()
+    response = await handler(req, exc)
     assert response.status_code == 204
     # Starlette's delete_cookie sets a Set-Cookie header with max-age=0
     # on the Response; ensure the refresh cookie is being cleared.
-    headers = getattr(response, "headers", {})
-    set_cookie = headers.get("set-cookie", "")
+    set_cookie = response.headers.get("set-cookie", "")
     assert "refresh_token=" in set_cookie.lower()
     assert "max-age=0" in set_cookie.lower()
+
+
+async def test_unhandled_exception_handler_returns_500_for_generic_error() -> None:
+    req = MagicMock()
+    response = await unhandled_exception_handler(req, Exception("Unexpected!"))
+    assert response.status_code == 500
+    body = bytes(response.body).decode()
+    assert "Internal server error" in body
+    assert '"code"' in body

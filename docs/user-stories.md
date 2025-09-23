@@ -280,3 +280,7 @@ Examples of codes include:
 - `internal_error` — unhandled server errors
 
 Note: logout of a specific session is idempotent and returns `204 No Content` even when the refresh token is missing/invalid; the cookie is cleared in that case.
+
+Additional notes:
+- For `http_error`, if no custom detail is provided (i.e., `detail=None` or it equals the default HTTP status phrase such as "Unauthorized" for 401), the response omits `detail` and returns only `{ "code": "http_error" }`. Any headers on the exception (e.g., `WWW-Authenticate`) are preserved.
+- `204 No Content` responses have no body.
