@@ -4,13 +4,17 @@ Initializes the FastAPI app, registers routers and exception handlers, and
 adds a middleware that sets common security headers.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 
 from app.api import chat, health, metrics, users
-from app.core.exception_handlers import app_exception_handler
+from app.core.exception_handlers import (
+    app_exception_handler,
+    http_exception_handler,
+    unhandled_exception_handler,
+)
 from app.core.exceptions import AppError
 
 app = FastAPI(
@@ -25,8 +29,10 @@ app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
 app.include_router(health.router, tags=["health"])
 app.include_router(metrics.router, tags=["metrics"])
 
-# Register the global exception handler for AppError
+# Register global exception handlers (specific before generic)
 app.add_exception_handler(AppError, app_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):

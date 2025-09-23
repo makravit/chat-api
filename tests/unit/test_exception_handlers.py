@@ -1,8 +1,13 @@
 from unittest.mock import MagicMock
 
 import pytest
+from fastapi import HTTPException
 
-from app.core.exception_handlers import app_exception_handler
+from app.core.exception_handlers import (
+    app_exception_handler,
+    http_exception_handler,
+    unhandled_exception_handler,
+)
 from app.core.exceptions import (
     AppError,
     EmailAlreadyRegisteredError,
@@ -31,5 +36,39 @@ async def test_app_exception_handler(
     response = await app_exception_handler(req, exc)
     assert response.status_code == expected_status
     assert response.body
-    body_bytes = bytes(response.body)
-    assert expected_detail in body_bytes.decode()
+    body = bytes(response.body).decode()
+    assert expected_detail in body
+    # All errors include a machine-readable code
+    assert '"code"' in body
+
+
+@pytest.mark.asyncio
+async def test_http_exception_handler_preserves_status_and_headers() -> None:
+    req = MagicMock()
+    exc = HTTPException(status_code=418, detail="I'm a teapot", headers={"X-Test": "1"})
+    response = await http_exception_handler(req, exc)
+    assert response.status_code == 418
+    body = bytes(response.body).decode()
+    assert "teapot" in body
+    assert response.headers.get("X-Test") == "1"
+    assert '"code"' in body
+
+
+@pytest.mark.asyncio
+async def test_http_exception_handler_non_http_fallback() -> None:
+    req = MagicMock()
+    response = await http_exception_handler(req, Exception("boom"))
+    assert response.status_code == 500
+    body = bytes(response.body).decode()
+    assert "Internal server error" in body
+    assert '"code"' in body
+
+
+@pytest.mark.asyncio
+async def test_unhandled_exception_handler_returns_500() -> None:
+    req = MagicMock()
+    response = await unhandled_exception_handler(req, RuntimeError("boom"))
+    assert response.status_code == 500
+    body = bytes(response.body).decode()
+    assert "Internal server error" in body
+    assert '"code"' in body

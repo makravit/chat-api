@@ -5,10 +5,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from jose import jwt
+from sqlalchemy.exc import SQLAlchemyError
 
 import app.core.config as cfg
 from app.core.auth import ALGORITHM, SECRET_KEY, hash_password
-from app.core.exceptions import InvalidCredentialsError
+from app.core.exceptions import InvalidCredentialsError, LogoutOperationError
 
 if TYPE_CHECKING:  # pragma: no cover - used for typing only
     from app.models.user import User
@@ -171,6 +172,47 @@ def test_logout_single_session_user_mismatch() -> None:
             return_value=token_repo,
         ),
         pytest.raises(InvalidCredentialsError),
+    ):
+        logout_single_session(
+            user,
+            make_dummy_db(),
+            refresh_token=join_parts("rtok"),
+        )
+
+
+def test_logout_db_error_fetch_translates_to_logout_operation_error() -> None:
+    user = cast("User", SimpleNamespace(id=1))
+    token_repo = MagicMock(
+        get_valid_token=MagicMock(side_effect=SQLAlchemyError("db boom")),
+    )
+    with (
+        patch(
+            "app.services.user_service.RefreshTokenRepository",
+            return_value=token_repo,
+        ),
+        pytest.raises(LogoutOperationError),
+    ):
+        logout_single_session(
+            user,
+            make_dummy_db(),
+            refresh_token=join_parts("rtok"),
+        )
+
+
+def test_logout_db_error_revoke_translates_to_logout_operation_error() -> None:
+    user = cast("User", SimpleNamespace(id=1))
+    token_repo = MagicMock(
+        get_valid_token=MagicMock(
+            return_value=SimpleNamespace(user_id=1, revoked=False),
+        ),
+        revoke_token=MagicMock(side_effect=SQLAlchemyError("db boom")),
+    )
+    with (
+        patch(
+            "app.services.user_service.RefreshTokenRepository",
+            return_value=token_repo,
+        ),
+        pytest.raises(LogoutOperationError),
     ):
         logout_single_session(
             user,

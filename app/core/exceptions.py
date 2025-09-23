@@ -44,3 +44,23 @@ class InvalidCredentialsError(AppError):
             message: Optional override for the default message.
         """
         super().__init__(message)
+
+
+class LogoutOperationError(AppError):
+    """Raised when a logout operation fails unexpectedly.
+
+    Intended for the service layer to signal non-credential-related failures
+    (e.g., database errors) so that the API can treat logout as idempotent
+    without catching broad exceptions.
+    """
+
+    def __init__(
+        self: "LogoutOperationError",
+        message: str = "Logout operation failed.",
+    ) -> None:
+        """Initialize a LogoutOperationError with an optional message.
+
+        Args:
+            message: Human-readable description of the failure.
+        """
+        super().__init__(message)

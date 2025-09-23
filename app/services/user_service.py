@@ -8,7 +8,11 @@ from typing import TYPE_CHECKING, cast
 
 from app.core.auth import create_access_token, hash_password, verify_password
 from app.core.config import settings
-from app.core.exceptions import EmailAlreadyRegisteredError, InvalidCredentialsError
+from app.core.exceptions import (
+    EmailAlreadyRegisteredError,
+    InvalidCredentialsError,
+    LogoutOperationError,
+)
 from app.core.logging import logger, mask_token
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.user_repository import UserRepository
@@ -95,8 +99,22 @@ def authenticate_user(
 
 def logout_single_session(current_user: User, db: Session, refresh_token: str) -> None:
     """Revoke the current session's refresh token only."""
+    from sqlalchemy.exc import (
+        SQLAlchemyError,  # local import to avoid hard dep at import time
+    )
+
     token_repo = RefreshTokenRepository(db)
-    token_obj = token_repo.get_valid_token(refresh_token)
+    try:
+        token_obj = token_repo.get_valid_token(refresh_token)
+    except SQLAlchemyError as exc:
+        logger.exception(
+            "Logout DB error while fetching token",
+            user_id=getattr(current_user, "id", None),
+            token=mask_token(refresh_token),
+            error=str(exc),
+        )
+        msg = "Logout operation failed."
+        raise LogoutOperationError(msg) from exc
     if not token_obj:
         logger.warning(
             "Suspicious activity: invalid or revoked refresh token used for logout",
@@ -139,7 +157,17 @@ def logout_single_session(current_user: User, db: Session, refresh_token: str) -
         )
         msg = "No active session or already logged out."
         raise InvalidCredentialsError(msg)
-    token_repo.revoke_token(refresh_token)
+    try:
+        token_repo.revoke_token(refresh_token)
+    except SQLAlchemyError as exc:
+        logger.exception(
+            "Logout DB error while revoking token",
+            user_id=current_user.id,
+            token=mask_token(refresh_token),
+            error=str(exc),
+        )
+        msg = "Logout operation failed."
+        raise LogoutOperationError(msg) from exc
     logger.info(
         "Refresh token revoked on logout",
         user_id=current_user.id,

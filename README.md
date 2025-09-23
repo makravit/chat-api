@@ -39,7 +39,7 @@ See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and
   - Session metadata: user agent and IP are stored for each token
   - Suspicious activity logging: all invalid, expired, revoked token use, and user agent/IP anomalies are logged
   - Error handling: invalid, expired, or reused tokens return `401 Unauthorized` with a generic error message
-- Logout: `POST /api/v1/users/logout` — revokes the current session's refresh token (requires valid refresh token from secure cookie; does not revoke all sessions)
+- Logout: `POST /api/v1/users/logout` — revokes the current session's refresh token; idempotent and returns 204 even if no active session (clears cookie)
 - Logout everywhere: `POST /api/v1/users/logout-all` — revokes all refresh tokens for the user (logout everywhere)
   - Both endpoints log suspicious activity for invalid, expired, or revoked token use
 - My profile: `GET /api/v1/users/me` — returns the authenticated user's profile (id, name, email)
@@ -463,7 +463,7 @@ Keep contributions aligned with these core rules (enforced by Ruff and CI):
   - Revokes only the current session's refresh token; does not revoke all sessions
   - Suspicious activity logging for invalid, expired, revoked token use
   - On success, returns `204 No Content`
-  - On failure (missing or invalid token), returns `401 Unauthorized` with a generic error message
+  - Idempotent: returns `204 No Content` even if the refresh token is missing/invalid/expired/revoked; the cookie is cleared
 
 **POST /api/v1/users/logout-all** — Log out everywhere (revoke all refresh tokens)
   - Revokes all refresh tokens for the user (logout everywhere)
@@ -479,6 +479,25 @@ Keep contributions aligned with these core rules (enforced by Ruff and CI):
 - **GET /metrics** — Prometheus metrics endpoint. Returns service and application metrics in Prometheus text format for monitoring and observability. Use with Prometheus, Grafana, or other monitoring tools. Only expose internally or protect with authentication if public.
 
 See the OpenAPI docs at `/docs` for full details and try out the endpoints interactively.
+
+
+## Exception handling and error schema
+
+This API centralizes exception handling and returns a consistent error response shape for failures:
+
+```json
+{ "detail": "Human-readable message", "code": "machine_readable_code" }
+```
+
+- Domain/service errors (subclasses of `AppError`) are mapped with appropriate HTTP statuses and codes, e.g.:
+  - `invalid_credentials` — 401 Unauthorized
+  - `email_already_registered` — 409 Conflict
+- Framework-level `HTTPException`s are logged and returned with `code: "http_error"`.
+- Unhandled exceptions are logged and returned as 500 with `code: "internal_error"`.
+
+Logout specifics:
+- `/api/v1/users/logout` is idempotent. Missing/invalid/expired/used tokens do not cause a 401 response; the endpoint responds with `204 No Content` and clears the `refresh_token` cookie.
+- On `invalid_credentials` scenarios generally, the API proactively clears the `refresh_token` cookie to avoid leaving stale session state on the client.
 
 
 ## Security Notes

@@ -302,7 +302,9 @@ def test_refresh_token_missing_cookie(
     }
     resp = client.post("/api/v1/users/refresh-token", headers=headers)
     assert resp.status_code == 401
-    assert "Invalid or expired refresh token" in resp.json()["detail"]
+    body = resp.json()
+    assert "Invalid or expired refresh token" in body["detail"]
+    assert body.get("code") in ("http_error", "invalid_credentials")
 
 
 def test_refresh_token_success(
@@ -357,7 +359,9 @@ def test_refresh_token_invalid(
         cookies={"refresh_token": "invalidtoken"},
     )
     assert resp.status_code == 401
-    assert "invalid" in resp.json()["detail"].lower()
+    body = resp.json()
+    assert "invalid" in body["detail"].lower()
+    assert body.get("code") in ("http_error", "invalid_credentials")
 
 
 def test_refresh_token_revoked_usage(
@@ -551,8 +555,7 @@ def test_logout_missing_refresh_token(
     access_token = tokens["access_token"]
     headers = {"Authorization": f"Bearer {access_token}"}
     resp = client.post("/api/v1/users/logout", headers=headers)
-    assert resp.status_code == 401
-    assert "No active session" in resp.json()["detail"]
+    assert resp.status_code == 204
 
 
 def test_logout_unauthenticated(client: TestClient) -> None:
@@ -572,7 +575,7 @@ def test_logout_empty_refresh_cookie(
         headers=headers,
         cookies={"refresh_token": ""},
     )
-    assert resp.status_code == 401
+    assert resp.status_code == 204
 
 
 def test_logout_success(
@@ -599,7 +602,7 @@ def test_logout_success(
     access_token2 = tokens2["access_token"]
     headers2 = {"Authorization": f"Bearer {access_token2}"}
     resp3 = client.post("/api/v1/users/logout", headers=headers2)
-    assert resp3.status_code == 401
+    assert resp3.status_code == 204
 
 
 def test_logout_sets_deleted_refresh_cookie(
@@ -634,8 +637,7 @@ def test_logout_endpoint_invalid_token(
         cookies={"refresh_token": "invalidtoken"},
         headers=headers,
     )
-    assert resp.status_code == 401
-    assert "no active session" in resp.json()["detail"].lower()
+    assert resp.status_code == 204
 
 
 def test_logout_endpoint_valid_token_repo_revoked(
@@ -712,24 +714,23 @@ def test_logout_exception_returns_401(
         headers=headers,
         cookies={"refresh_token": rtok},
     )
-    assert resp.status_code == 401
+    assert resp.status_code == 204
 
 
-def test_logout_generic_exception_returns_500(
+def test_logout_domain_logout_error_returns_204(
     client: TestClient,
     login_and_get_tokens: Callable[[], dict[str, Any]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Generic exceptions from logout_single_session should bubble to 500."""
+    """Domain logout errors are treated as idempotent 204 responses."""
     tokens = login_and_get_tokens()
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
 
-    class SimulatedUnexpectedError(RuntimeError):
-        """Raised to simulate an unexpected error in tests."""
+    from app.core.exceptions import LogoutOperationError
 
     def boom(*_args: object, **_kwargs: object) -> None:
         msg = "boom"
-        raise SimulatedUnexpectedError(msg)
+        raise LogoutOperationError(msg)
 
     monkeypatch.setattr(app.services.user_service, "logout_single_session", boom)
     rtok = tokens["refresh_token"]
@@ -739,7 +740,7 @@ def test_logout_generic_exception_returns_500(
         headers=headers,
         cookies={"refresh_token": rtok},
     )
-    assert resp.status_code == 500
+    assert resp.status_code == 204
 
 
 def test_logout_cookie_belongs_to_other_user(
@@ -777,7 +778,7 @@ def test_logout_cookie_belongs_to_other_user(
         headers=headers_b,
         cookies={"refresh_token": cookie_a},
     )
-    assert resp.status_code == 401
+    assert resp.status_code == 204
 
 
 def test_refresh_access_token_claims_sub(

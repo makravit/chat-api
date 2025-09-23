@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.auth import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.exceptions import InvalidCredentialsError
+from app.core.exceptions import InvalidCredentialsError, LogoutOperationError
 from app.core.logging import logger
 from app.models.user import User
 from app.schemas.user import TokenResponse, UserLogin, UserRegister, UserResponse
@@ -177,9 +177,8 @@ def refresh_token(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Logout user and revoke refresh token",
     description="""
-    Logout the authenticated user and revoke their refresh token. No input
-    required; user is identified via access token. If no valid refresh token
-    exists, returns 401 Unauthorized.
+    Logout the authenticated user and revoke their refresh token. The operation
+    is idempotent and returns 204 even if no valid session is present.
     """,
 )
 def logout(
@@ -188,18 +187,19 @@ def logout(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
-    """Logout the authenticated user and revoke their refresh token."""
+    """Logout the authenticated user and revoke their refresh token.
+
+    Idempotent: returns 204 even if the refresh cookie is missing/invalid.
+    """
     refresh_token_value = _get_refresh_cookie(request)
     if not refresh_token_value:
         logger.warning(
-            "Logout failed: missing refresh token",
+            "Logout: no refresh token cookie found",
             user_id=current_user.id,
             email=current_user.email,
         )
-        raise HTTPException(
-            status_code=401,
-            detail=LOGOUT_GENERIC_MSG,
-        )
+        _clear_refresh_cookie(response)
+        return
     try:
         user_service.logout_single_session(
             current_user,
@@ -207,21 +207,28 @@ def logout(
             refresh_token=refresh_token_value,
         )
     except InvalidCredentialsError as e:
+        # Treat invalid/expired tokens as already logged-out.
         logger.warning(
-            "Logout failed",
+            "Logout: invalid refresh token treated as logged-out",
             user_id=current_user.id,
             email=current_user.email,
             error=str(e),
         )
-        raise HTTPException(status_code=401, detail=LOGOUT_GENERIC_MSG) from None
-    else:
-        logger.info(
-            "User logged out",
+    except LogoutOperationError as e:
+        # Idempotent behavior: unexpected logout errors still result in 204.
+        logger.exception(
+            "Logout: unexpected error treated as logged-out",
             user_id=current_user.id,
             email=current_user.email,
+            error=str(e),
         )
-        _clear_refresh_cookie(response)
-        return
+    logger.info(
+        "User logged out",
+        user_id=current_user.id,
+        email=current_user.email,
+    )
+    _clear_refresh_cookie(response)
+    return
 
 
 @router.post(

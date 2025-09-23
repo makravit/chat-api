@@ -126,7 +126,7 @@ Allow users to securely log out from a single session/device, invalidating only 
     - **Validation:**
       - Only the current session's refresh token is revoked; other sessions/devices remain active.
       - Suspicious activity logging for invalid, expired, or revoked token use.
-      - If no valid refresh token is provided, or the token is invalid/expired/revoked, API responds with `401 Unauthorized` and a generic error message ("No active session or already logged out.").
+      - Idempotent behavior: if the refresh token is missing, invalid, expired, revoked, or otherwise not usable, the endpoint still returns `204 No Content` and clears the cookie. This avoids leaking whether a session is active.
       - After logout, the user must re-authenticate on that device to obtain new tokens.
     - **Request Body:** None (token is provided via cookie)
     - **Response Body:** None (`204 No Content`)
@@ -264,3 +264,19 @@ Guide anonymous users to become authenticated to access chat features.
 `POST /api/v1/chat` (authentication with access token (JWT) required)
 
 ---
+
+## Error responses (shape and codes)
+
+Across API endpoints, error responses use a consistent JSON shape:
+
+```json
+{ "detail": "Human-readable message", "code": "machine_readable_code" }
+```
+
+Examples of codes include:
+- `invalid_credentials` — authentication failures (e.g., bad login or invalid session)
+- `email_already_registered` — attempted registration with an existing email
+- `http_error` — framework-level HTTP errors (e.g., validation)
+- `internal_error` — unhandled server errors
+
+Note: logout of a specific session is idempotent and returns `204 No Content` even when the refresh token is missing/invalid; the cookie is cleared in that case.
