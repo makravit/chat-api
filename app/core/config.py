@@ -11,9 +11,6 @@ class Settings(BaseSettings):
     """
 
     DATABASE_URL: str = "postgresql://chatbot:chatbotpass@db:5432/chatbotdb"
-    POSTGRES_USER: str = "chatbot"
-    POSTGRES_PASSWORD: str = "chatbotpass"
-    POSTGRES_DB: str = "chatbotdb"
     SECRET_KEY: str = "secret-key"
     LOG_LEVEL: str = "INFO"  # Configurable log level, e.g., DEBUG, INFO, WARNING, ERROR
     METRICS_USER: str = "metrics"
@@ -22,7 +19,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 1
     REFRESH_TOKEN_MAX_LIFETIME_DAYS: int = 30
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 settings = Settings()

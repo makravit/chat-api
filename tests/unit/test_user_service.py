@@ -4,9 +4,10 @@ from typing import TYPE_CHECKING, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
+from jose import jwt
 
 import app.core.config as cfg
-from app.core.auth import hash_password
+from app.core.auth import ALGORITHM, SECRET_KEY, hash_password
 from app.core.exceptions import InvalidCredentialsError
 
 if TYPE_CHECKING:  # pragma: no cover - used for typing only
@@ -14,12 +15,23 @@ if TYPE_CHECKING:  # pragma: no cover - used for typing only
 from app.services.user_service import (
     EmailAlreadyRegisteredError,
     authenticate_user,
+    issue_access_token,
     logout_all_sessions,
     logout_single_session,
     register_user,
     rotate_refresh_token,
 )
 from tests.utils import build_password, join_parts, make_dummy_db
+
+
+# ---------- access token helper ----------
+def test_issue_access_token_includes_uid_and_sub() -> None:
+    user = cast("User", SimpleNamespace(id=123, email="u@e.com"))
+    token = issue_access_token(user)
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    assert payload["uid"] == 123
+    assert payload["sub"] == "u@e.com"
+    assert "exp" in payload
 
 
 # ---------- authenticate_user ----------

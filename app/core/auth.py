@@ -20,8 +20,8 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
 
-SECRET_KEY = settings.SECRET_KEY
-ALGORITHM = "HS256"
+SECRET_KEY: str = settings.SECRET_KEY
+ALGORITHM: str = "HS256"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
 security = HTTPBasic()
@@ -76,13 +76,13 @@ def get_current_user(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email_value = payload.get("sub")
-        if not isinstance(email_value, str):
+        uid_value = payload.get("uid")
+        if not isinstance(uid_value, int):
             raise credentials_exception
-        email: str = email_value
+        uid: int = uid_value
     except JWTError:
         raise credentials_exception from None
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.id == uid).first()
     if user is None:
         raise credentials_exception
     return user

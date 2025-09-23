@@ -60,7 +60,7 @@ def test_get_current_user_invalid_token(monkeypatch: pytest.MonkeyPatch) -> None
     assert "Authentication required" in exc.value.detail
 
 
-def test_get_current_user_missing_sub(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_current_user_missing_uid(monkeypatch: pytest.MonkeyPatch) -> None:
     def decode(_token: str, _key: str, **_kwargs: object) -> dict[str, object]:
         return {}
 
@@ -73,7 +73,7 @@ def test_get_current_user_missing_sub(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_get_current_user_user_none(monkeypatch: pytest.MonkeyPatch) -> None:
     def decode(_token: str, _key: str, **_kwargs: object) -> dict[str, object]:
-        return {"sub": "foo@example.com"}
+        return {"uid": 123}
 
     monkeypatch.setattr("app.core.auth.jwt.decode", decode)
     db = make_db_query_first(None)

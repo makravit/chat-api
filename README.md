@@ -69,6 +69,8 @@ See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and
   ```
 
 > **Note:** You can configure the JWT token expiration (in minutes) using the `JWT_EXPIRE_MINUTES` environment variable. The default is 15 minutes if not set. Refresh token expiration is configurable via `REFRESH_TOKEN_EXPIRE_DAYS` (default: 1 day). The maximum refresh token lifetime is configurable via `REFRESH_TOKEN_MAX_LIFETIME_DAYS` (default: 30 days).
+>
+> Identity claim: Access tokens include both `uid` (the numeric user id) and `sub` (the email). The backend resolves the current user strictly by `uid`; tokens missing `uid` are rejected.
 - Alembic migration scripts (`alembic/`) and config (`alembic.ini`) are mounted into containers for Alembic to work.
 
 ## Development
@@ -487,6 +489,9 @@ See the OpenAPI docs at `/docs` for full details and try out the endpoints inter
 - Sliding expiration is enforced: each rotation extends expiry up to a max lifetime
 - Suspicious activity logging is implemented for all refresh token operations
 - The provided Dockerfile runs the app as a non-root user for security
+
+Auth tokens and identity:
+- Access tokens include both `uid` and `sub`. The API uses `uid` as the canonical identity claim to load users by primary key. This avoids ambiguity if emails change. If a token lacks `uid` or references a non-existent user id, the request is rejected with 401.
 
 Cookie policy: The refresh cookie lifetime is derived from `REFRESH_TOKEN_EXPIRE_DAYS` (in seconds). For security, HttpOnly, Secure, and SameSite=strict are enforced. The cookie is rotated alongside the refresh token on `/api/v1/users/refresh-token` and cleared on logout endpoints.
 

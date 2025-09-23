@@ -37,6 +37,15 @@ def register_user(name: str, email: str, password: str, db: Session) -> User:
     return new_user
 
 
+def issue_access_token(user: User) -> str:
+    """Create and return a JWT access token for the given user.
+
+    Encapsulates the payload shape and keeps token issuance consistent
+    across the service.
+    """
+    return create_access_token({"sub": user.email, "uid": user.id})
+
+
 def authenticate_user(
     email: str,
     password: str,
@@ -55,7 +64,7 @@ def authenticate_user(
         logger.warning("Authentication failed", email=email)
         msg = "Email or password incorrect."
         raise InvalidCredentialsError(msg)
-    access_token = create_access_token({"sub": db_user.email})
+    access_token = issue_access_token(db_user)
     # Do not revoke all previous tokens; allow multiple sessions/devices
     # Create secure random refresh token
     refresh_token = token_urlsafe(64)
@@ -304,7 +313,7 @@ def rotate_refresh_token(
         )
         msg = "User not found"
         raise InvalidCredentialsError(msg)
-    access_token = create_access_token({"sub": db_user.email})
+    access_token = issue_access_token(db_user)
     # Sliding expiration: extend expiry on rotation, but never exceed max lifetime
 
     refresh_expiry_days = settings.REFRESH_TOKEN_EXPIRE_DAYS
