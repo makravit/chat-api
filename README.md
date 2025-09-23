@@ -432,7 +432,7 @@ Keep contributions aligned with these core rules (enforced by Ruff and CI):
 | POST   | /api/v1/users/register   | No            | Register a new user (name, email, password) |
 | POST   | /api/v1/users/login      | No            | Log in and receive JWT access token; sets secure refresh cookie |
 | POST   | /api/v1/users/refresh-token | No (cookie) | Rotate refresh token (from secure cookie) and return new access token |
-| POST   | /api/v1/users/logout     | Bearer + cookie | Revoke current session’s refresh token; clears cookie |
+| POST   | /api/v1/users/logout     | Bearer        | Revoke current session’s refresh token (uses cookie); clears cookie |
 | POST   | /api/v1/users/logout-all | Bearer        | Revoke all refresh tokens for the user; clears cookie |
 | GET    | /api/v1/users/me         | Bearer        | Get the authenticated user’s profile (id, name, email) |
 | POST   | /api/v1/chat             | Bearer        | Send a chat message to the AI bot |
@@ -444,13 +444,13 @@ Keep contributions aligned with these core rules (enforced by Ruff and CI):
 - **POST /api/v1/users/register** — Register a new user (name, email, password)
 - **POST /api/v1/users/login** — Log in and receive a JWT token and refresh token
   - Accepts email and password
-  - On success, returns a JWT access token and a secure random refresh token
+  - On success, returns a JWT access token and sets a secure random refresh token in an HttpOnly cookie (the refresh token is not returned in the response body)
   - Multiple sessions/devices supported (no global revocation on login)
   - Refresh token is stored with session metadata (user agent, IP)
   - On failure, returns `401 Unauthorized` with a generic error message
 
 - **POST /api/v1/users/refresh-token** — Refresh access token using a refresh token
-  - Accepts a valid refresh token (from cookie or header)
+  - Accepts a valid refresh token (from secure cookie)
   - On success, returns a new JWT access token and a new refresh token
   - Previous refresh token is invalidated (single-use)
   - Sliding expiration: expiry is extended on rotation, up to max lifetime
@@ -459,7 +459,7 @@ Keep contributions aligned with these core rules (enforced by Ruff and CI):
   - On failure, returns `401 Unauthorized` with a generic error message
 
 **POST /api/v1/users/logout** — Log out and revoke the current session's refresh token
-  - Requires a valid refresh token (from cookie or header)
+  - Requires authentication via Bearer access token; uses the refresh token from the secure cookie if present
   - Revokes only the current session's refresh token; does not revoke all sessions
   - Suspicious activity logging for invalid, expired, revoked token use
   - On success, returns `204 No Content`
@@ -469,7 +469,7 @@ Keep contributions aligned with these core rules (enforced by Ruff and CI):
   - Revokes all refresh tokens for the user (logout everywhere)
   - Suspicious activity logging for invalid, expired, revoked token use
   - On success, returns `204 No Content`
-  - On failure (no valid tokens), returns `401 Unauthorized` with a generic error message
+  - Idempotent: returns `204 No Content` even if there are no active sessions/tokens to revoke; `401` is only returned when the request is unauthenticated
 
 - **POST /api/v1/chat** — Send a chat message (requires JWT in Authorization header)
 - **GET /api/v1/users/me** — Get the authenticated user's profile (id, name, email)
@@ -479,6 +479,57 @@ Keep contributions aligned with these core rules (enforced by Ruff and CI):
 - **GET /metrics** — Prometheus metrics endpoint. Returns service and application metrics in Prometheus text format for monitoring and observability. Use with Prometheus, Grafana, or other monitoring tools. Only expose internally or protect with authentication if public.
 
 See the OpenAPI docs at `/docs` for full details and try out the endpoints interactively.
+
+
+## Auth flows
+
+A quick overview of how authentication and session flows work. Refresh tokens are only ever sent/stored in a secure, HttpOnly cookie; access tokens are returned in responses and used as Bearer tokens.
+
+- Login
+  - Input: email + password
+  - Output: access token in response body; sets refresh token cookie (HttpOnly, Secure, SameSite=Strict)
+
+  ```text
+  Client -> Server: POST /api/v1/users/login { email, password }
+  Server -> Client: 200 { access_token }
+                     Set-Cookie: refresh_token=<secure_random>; HttpOnly; Secure; SameSite=Strict; Max-Age=...
+  ```
+
+- Refresh
+  - Input: refresh token from secure cookie
+  - Output: new access token; rotates refresh cookie (single-use; sliding expiration up to max lifetime)
+  - Failure: 401 Unauthorized with generic message when missing/invalid/expired/reused
+
+  ```text
+  Client -> Server: POST /api/v1/users/refresh-token
+                    Cookie: refresh_token=<current>
+  Server -> Client: 200 { access_token }
+                     Set-Cookie: refresh_token=<rotated>; HttpOnly; Secure; SameSite=Strict; Max-Age=...
+  ```
+
+- Logout (single session)
+  - Requires: valid Bearer access token
+  - Behavior: idempotent; returns 204 even if cookie is missing/invalid/expired/revoked; clears cookie
+
+  ```text
+  Client -> Server: POST /api/v1/users/logout
+                    Authorization: Bearer <access>
+                    Cookie: refresh_token=<may be present>
+  Server -> Client: 204 No Content
+                     Set-Cookie: refresh_token=; Max-Age=0; HttpOnly; Secure; SameSite=Strict
+  ```
+
+- Logout everywhere (all sessions)
+  - Requires: valid Bearer access token
+  - Behavior: idempotent; revokes all user refresh tokens; returns 204 even if none are active; clears cookie
+  - 401 Unauthorized is only returned when the request is unauthenticated
+
+  ```text
+  Client -> Server: POST /api/v1/users/logout-all
+                    Authorization: Bearer <access>
+  Server -> Client: 204 No Content
+                     Set-Cookie: refresh_token=; Max-Age=0; HttpOnly; Secure; SameSite=Strict
+  ```
 
 
 ## Exception handling and error schema

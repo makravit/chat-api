@@ -84,18 +84,18 @@ Allow users to securely refresh their access token using a refresh token.
 
 **Acceptance Criteria:**
 **Given** my access token has expired,
-  **When** I send a `POST /api/v1/users/refresh-token` request with my refresh token,
+  **When** I send a `POST /api/v1/users/refresh-token` request (refresh token provided via secure cookie),
   **Then** I receive a new access token (JWT) and a new refresh token.
     - **Status Code:** `200 OK` (on success)
     - **Validation:**
-      - Request must include a valid refresh token (from cookie).
+  - Request must include a valid refresh token (from secure cookie only; not allowed via headers or body).
       - If refresh token is valid and not expired, API returns a new access token and a new refresh token.
       - Previous refresh token is invalidated and cannot be reused (single-use).
       - Sliding expiration: expiry is extended on rotation, up to a configurable max lifetime (e.g., 30 days).
       - Only one valid refresh token exists per user/session/device. Refresh tokens are tied to session metadata (user agent, IP).
       - Suspicious activity logging: all invalid, expired, revoked token use, and user agent/IP anomalies are logged.
       - If no valid refresh token is provided, or the token is invalid/expired/reused, API responds with `401 Unauthorized` and a generic error message ("Invalid or expired refresh token.").
-    - **Request Body:** None (token is provided via cookie)
+  - **Request Body:** None (token is provided via secure cookie)
     - **Response Body:** `TokenResponse`
       - `access_token: str`
       - `token_type: str = "bearer"`
@@ -120,15 +120,15 @@ Allow users to securely log out from a single session/device, invalidating only 
 
 **Acceptance Criteria:**
 **Given** I am authenticated on a device or session,
-  **When** I send a `POST /api/v1/users/logout` request with my refresh token cookie,
+  **When** I send a `POST /api/v1/users/logout` request (refresh token read from secure cookie),
   **Then** my refresh token for that session is revoked and cannot be used again.
     - **Status Code:** `204 No Content` (on success)
     - **Validation:**
       - Only the current session's refresh token is revoked; other sessions/devices remain active.
       - Suspicious activity logging for invalid, expired, or revoked token use.
-      - Idempotent behavior: if the refresh token is missing, invalid, expired, revoked, or otherwise not usable, the endpoint still returns `204 No Content` and clears the cookie. This avoids leaking whether a session is active.
+  - Idempotent behavior: if the refresh token is missing, invalid, expired, revoked, or otherwise not usable, the endpoint still returns `204 No Content` and clears the cookie. This avoids leaking whether a session is active.
       - After logout, the user must re-authenticate on that device to obtain new tokens.
-    - **Request Body:** None (token is provided via cookie)
+  - **Request Body:** None (token is provided via secure cookie)
     - **Response Body:** None (`204 No Content`)
     - **Cookie Side Effects:** Clears `refresh_token` cookie with `HttpOnly`, `Secure`, `SameSite=Strict`, and `Max-Age=0`.
 
@@ -156,7 +156,7 @@ Allow users to securely log out from all sessions/devices, invalidating all refr
     - **Validation:**
       - All sessions/devices are logged out; all refresh tokens for the user are revoked.
       - Suspicious activity logging for invalid, expired, or revoked token use.
-      - If no valid refresh tokens exist, API responds with `401 Unauthorized` and a generic error message ("No active sessions or already logged out everywhere.").
+  - Idempotent behavior: if no valid refresh tokens exist, the endpoint still returns `204 No Content`. `401 Unauthorized` is only returned if the request is unauthenticated (missing/invalid access token).
       - After logout-all, the user must re-authenticate on any device to obtain new tokens.
     - **Request Body:** None
     - **Response Body:** None (`204 No Content`)
