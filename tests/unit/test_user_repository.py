@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
 from app.models.user import User
-from app.services.user_repository import UserRepository
+from app.repositories.user_repository import UserRepository
 from tests.utils import join_parts
 
 
@@ -69,3 +69,48 @@ def test_create_user() -> None:
     assert user.name == "Test"
     assert user.email == "test@example.com"
     assert user.hashed_password == join_parts("x")
+
+
+def test_update_password_user_found() -> None:
+    # Build a DB fake where query().filter().first() returns our user
+    user = User(
+        id=1,
+        name="Alice",
+        email="a@example.com",
+        hashed_password=join_parts("old"),
+    )
+    db = MagicMock()
+    query_mock = MagicMock()
+    filter_mock = MagicMock()
+    filter_mock.first.return_value = user
+    query_mock.filter.return_value = filter_mock
+    db.query.return_value = query_mock
+
+    db.add = MagicMock()
+    db.commit = MagicMock()
+
+    repo = UserRepository(db)
+    repo.update_password(user_id=1, new_hashed_password=join_parts("new"))
+
+    assert user.hashed_password == join_parts("new")
+    db.add.assert_called_once_with(user)
+    db.commit.assert_called_once()
+
+
+def test_update_password_user_not_found() -> None:
+    # Build a DB fake where no user is found by id
+    db = MagicMock()
+    query_mock = MagicMock()
+    filter_mock = MagicMock()
+    filter_mock.first.return_value = None
+    query_mock.filter.return_value = filter_mock
+    db.query.return_value = query_mock
+
+    db.add = MagicMock()
+    db.commit = MagicMock()
+
+    repo = UserRepository(db)
+    repo.update_password(user_id=999, new_hashed_password=join_parts("new"))
+
+    db.add.assert_not_called()
+    db.commit.assert_not_called()
