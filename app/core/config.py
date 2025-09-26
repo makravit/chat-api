@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     JWT_EXPIRE_MINUTES: int = 15  # JWT expiration in minutes (default: 15)
     REFRESH_TOKEN_EXPIRE_DAYS: int = 1
     REFRESH_TOKEN_MAX_LIFETIME_DAYS: int = 30
+    ARGON2_TIME_COST: int = 3
+    ARGON2_MEMORY_COST: int = 65536
+    ARGON2_PARALLELISM: int = 2
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

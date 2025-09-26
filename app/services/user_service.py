@@ -6,7 +6,14 @@ from datetime import UTC, datetime, timedelta
 from secrets import token_urlsafe
 from typing import TYPE_CHECKING, cast
 
-from app.core.auth import create_access_token, hash_password, verify_password
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.core.auth import (
+    create_access_token,
+    hash_password,
+    needs_rehash,
+    verify_password,
+)
 from app.core.config import settings
 from app.core.exceptions import (
     EmailAlreadyRegisteredError,
@@ -69,116 +76,24 @@ def authenticate_user(
         logger.warning("Authentication failed", email=email)
         msg = "Email or password incorrect."
         raise InvalidCredentialsError(msg)
-    access_token = issue_access_token(db_user)
-    # Do not revoke all previous tokens; allow multiple sessions/devices
-    # Create secure random refresh token
-    refresh_token = token_urlsafe(64)
-    # Configurable refresh token expiry
-    expires_at = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    token_repo.add_token(
-        db_user.id,
-        refresh_token,
-        expires_at,
-        user_agent=user_agent,
-        ip_address=ip_address,
+    _upgrade_password_hash_if_needed(repo, db_user, password)
+    return _build_successful_auth_response(
+        token_repo,
+        db_user,
+        email,
+        user_agent,
+        ip_address,
     )
-    logger.info(
-        "Authentication successful",
-        user_id=getattr(db_user, "id", None),
-        email=email,
-    )
-    log_refresh_token_event(
-        event_type="create",
-        user_id=db_user.id,
-        token=refresh_token,
-        user_agent=user_agent,
-        ip_address=ip_address,
-        details={"expires_at": expires_at.isoformat()},
-    )
-    return access_token, refresh_token
 
 
 def logout_single_session(current_user: User, db: Session, refresh_token: str) -> None:
     """Revoke the current session's refresh token only."""
-    from sqlalchemy.exc import (
-        SQLAlchemyError,  # local import to avoid hard dep at import time
-    )
-
     token_repo = RefreshTokenRepository(db)
-    try:
-        token_obj = token_repo.get_valid_token(refresh_token)
-    except SQLAlchemyError as exc:
-        logger.exception(
-            "Logout DB error while fetching token",
-            user_id=getattr(current_user, "id", None),
-            token=mask_token(refresh_token),
-            error=str(exc),
-        )
-        msg = "Logout operation failed."
-        raise LogoutOperationError(msg) from exc
-    if not token_obj:
-        logger.warning(
-            "Suspicious activity: invalid or revoked refresh token used for logout",
-            user_id=getattr(current_user, "id", None),
-            token=mask_token(refresh_token),
-        )
-        log_refresh_token_event(
-            event_type="suspicious",
-            user_id=getattr(current_user, "id", None),
-            token=mask_token(refresh_token),
-            details={"reason": "invalid or revoked token used for logout"},
-        )
-        msg = "No active session or already logged out."
-        raise LogoutNoSessionError(msg)
-    if token_obj.user_id != current_user.id:
-        logger.warning(
-            "Suspicious activity: refresh token user mismatch on logout",
-            user_id=getattr(current_user, "id", None),
-            token=mask_token(refresh_token),
-        )
-        log_refresh_token_event(
-            event_type="suspicious",
-            user_id=getattr(current_user, "id", None),
-            token=mask_token(refresh_token),
-            details={"reason": "refresh token user mismatch on logout"},
-        )
-        msg = "No active session or already logged out."
-        raise LogoutNoSessionError(msg)
-    if token_obj.revoked:
-        logger.warning(
-            "Suspicious activity: revoked refresh token used for logout",
-            user_id=current_user.id,
-            token=mask_token(refresh_token),
-        )
-        log_refresh_token_event(
-            event_type="suspicious",
-            user_id=current_user.id,
-            token=mask_token(refresh_token),
-            details={"reason": "revoked token used for logout"},
-        )
-        msg = "No active session or already logged out."
-        raise LogoutNoSessionError(msg)
-    try:
-        token_repo.revoke_token(refresh_token)
-    except SQLAlchemyError as exc:
-        logger.exception(
-            "Logout DB error while revoking token",
-            user_id=current_user.id,
-            token=mask_token(refresh_token),
-            error=str(exc),
-        )
-        msg = "Logout operation failed."
-        raise LogoutOperationError(msg) from exc
-    logger.info(
-        "Refresh token revoked on logout",
-        user_id=current_user.id,
-        token=mask_token(refresh_token),
+    token_obj = _fetch_token_or_raise_logout_error(
+        token_repo, current_user, refresh_token
     )
-    log_refresh_token_event(
-        event_type="revoke",
-        user_id=current_user.id,
-        token=refresh_token,
-    )
+    _validate_logout_token_owner(current_user, token_obj, refresh_token)
+    _revoke_token_with_logging(token_repo, current_user, refresh_token)
 
 
 def logout_all_sessions(current_user: User, db: Session) -> None:
@@ -189,118 +104,7 @@ def logout_all_sessions(current_user: User, db: Session) -> None:
         "All refresh tokens revoked (logout everywhere)",
         user_id=current_user.id,
     )
-    log_refresh_token_event(event_type="revoke_all", user_id=current_user.id)
-
-
-# Helper functions for token validation and anomaly detection
-def _validate_refresh_token(
-    token_obj: RefreshToken | None, token: str, now: datetime
-) -> None:
-    """Validate refresh token object and raise if invalid/expired/revoked."""
-    if not token_obj:
-        logger.warning(
-            "Suspicious activity: invalid or revoked refresh token used for rotation",
-            token=mask_token(token),
-        )
-        log_refresh_token_event(
-            event_type="suspicious",
-            token=mask_token(token),
-            details={"reason": "invalid or revoked token used for rotation"},
-        )
-        msg = "Invalid or expired refresh token"
-        raise InvalidCredentialsError(msg)
-    if token_obj.revoked:
-        logger.warning(
-            "Suspicious activity: revoked refresh token used for rotation",
-            user_id=token_obj.user_id,
-            token=mask_token(token),
-        )
-        log_refresh_token_event(
-            event_type="suspicious",
-            user_id=token_obj.user_id,
-            token=mask_token(token),
-            details={"reason": "revoked token used for rotation"},
-        )
-        msg = "Invalid or expired refresh token"
-        raise InvalidCredentialsError(msg)
-    if token_obj.expires_at < now:
-        logger.warning(
-            "Suspicious activity: expired refresh token used for rotation",
-            user_id=token_obj.user_id,
-            token=mask_token(token),
-        )
-        log_refresh_token_event(
-            event_type="suspicious",
-            user_id=token_obj.user_id,
-            token=mask_token(token),
-            details={"reason": "expired token used for rotation"},
-        )
-        msg = "Invalid or expired refresh token"
-        raise InvalidCredentialsError(msg)
-
-
-def _detect_anomalies(
-    token_obj: RefreshToken,
-    token: str,
-    user_agent: str | None = None,
-    ip_address: str | None = None,
-) -> None:
-    """Detect anomalies comparing provided metadata with stored values."""
-    if user_agent and token_obj.user_agent and user_agent != token_obj.user_agent:
-        logger.warning(
-            "Suspicious activity: user agent anomaly detected during refresh",
-            user_id=token_obj.user_id,
-            expected=token_obj.user_agent,
-            actual=user_agent,
-        )
-        log_refresh_token_event(
-            event_type="anomaly",
-            user_id=token_obj.user_id,
-            token=mask_token(token),
-            user_agent=user_agent,
-            ip_address=ip_address,
-            details={
-                "expected_user_agent": token_obj.user_agent,
-                "actual_user_agent": user_agent,
-            },
-        )
-    if ip_address and token_obj.ip_address and ip_address != token_obj.ip_address:
-        logger.warning(
-            "Suspicious activity: IP address anomaly detected during refresh",
-            user_id=token_obj.user_id,
-            expected=token_obj.ip_address,
-            actual=ip_address,
-        )
-        log_refresh_token_event(
-            event_type="anomaly",
-            user_id=token_obj.user_id,
-            token=mask_token(token),
-            user_agent=user_agent,
-            ip_address=ip_address,
-            details={
-                "expected_ip_address": token_obj.ip_address,
-                "actual_ip_address": ip_address,
-            },
-        )
-
-
-def _create_refresh_token(
-    token_repo: RefreshTokenRepository,
-    user_id: int,
-    expiry: datetime,
-    user_agent: str | None,
-    ip_address: str | None,
-) -> str:
-    """Create and persist a new refresh token and return its value."""
-    new_refresh_token = token_urlsafe(64)
-    token_repo.add_token(
-        user_id,
-        new_refresh_token,
-        expiry,
-        user_agent=user_agent,
-        ip_address=ip_address,
-    )
-    return new_refresh_token
+    _log_refresh_token_event(event_type="revoke_all", user_id=current_user.id)
 
 
 def rotate_refresh_token(
@@ -319,7 +123,7 @@ def rotate_refresh_token(
     _detect_anomalies(token_typed, old_refresh_token, user_agent, ip_address)
     # Revoke old token (single-use)
     token_repo.revoke_token(old_refresh_token)
-    log_refresh_token_event(
+    _log_refresh_token_event(
         event_type="rotate",
         user_id=token_typed.user_id,
         token=mask_token(old_refresh_token),
@@ -334,7 +138,7 @@ def rotate_refresh_token(
             "Suspicious activity: user not found for refresh token",
             user_id=user_id,
         )
-        log_refresh_token_event(
+        _log_refresh_token_event(
             event_type="suspicious",
             user_id=user_id,
             token=mask_token(old_refresh_token),
@@ -364,7 +168,7 @@ def rotate_refresh_token(
         user_id=user_id,
         new_expiry=new_expiry.isoformat(),
     )
-    log_refresh_token_event(
+    _log_refresh_token_event(
         event_type="create",
         user_id=user_id,
         token=mask_token(new_refresh_token),
@@ -375,7 +179,7 @@ def rotate_refresh_token(
     return access_token, new_refresh_token
 
 
-def log_refresh_token_event(
+def _log_refresh_token_event(
     event_type: str,
     user_id: int | None = None,
     token: str | None = None,
@@ -399,3 +203,262 @@ def log_refresh_token_event(
     }
     # Example: log to file or stdout
     logger.info(f"RefreshTokenAudit: {log_entry}")
+
+
+# Private helper functions (ordered by first usage in public APIs)
+def _upgrade_password_hash_if_needed(
+    repo: UserRepository, user: User, password: str
+) -> None:
+    """Rehash and persist password if current hash needs upgrade.
+
+    Best-effort; failures are swallowed to avoid blocking login.
+    """
+    try:
+        if needs_rehash(user.hashed_password):
+            new_hash = hash_password(password)
+            repo.update_password(user.id, new_hash)
+            logger.info("Password hash upgraded on login", user_id=user.id)
+    except (SQLAlchemyError, ValueError) as exc:
+        # Rehash failures shouldn't block logins; proceed without upgrade.
+        logger.debug(
+            "Password hash upgrade skipped",
+            user_id=getattr(user, "id", None),
+            error=str(exc),
+        )
+
+
+def _build_successful_auth_response(
+    token_repo: RefreshTokenRepository,
+    user: User,
+    email: str,
+    user_agent: str | None,
+    ip_address: str | None,
+) -> tuple[str, str]:
+    """Issue access + refresh tokens and emit logs consistently."""
+    access_token = issue_access_token(user)
+    expires_at = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    refresh_token = _create_refresh_token(
+        token_repo,
+        user.id,
+        expires_at,
+        user_agent,
+        ip_address,
+    )
+    logger.info(
+        "Authentication successful",
+        user_id=getattr(user, "id", None),
+        email=email,
+    )
+    _log_refresh_token_event(
+        event_type="create",
+        user_id=user.id,
+        token=refresh_token,
+        user_agent=user_agent,
+        ip_address=ip_address,
+        details={"expires_at": expires_at.isoformat()},
+    )
+    return access_token, refresh_token
+
+
+def _fetch_token_or_raise_logout_error(
+    token_repo: RefreshTokenRepository, current_user: User, refresh_token: str
+) -> RefreshToken | None:
+    """Fetch valid token for logout, mapping DB errors to API errors."""
+    try:
+        token_obj = token_repo.get_valid_token(refresh_token)
+    except SQLAlchemyError as exc:
+        logger.exception(
+            "Logout DB error while fetching token",
+            user_id=getattr(current_user, "id", None),
+            token=mask_token(refresh_token),
+            error=str(exc),
+        )
+        msg = "Logout operation failed."
+        raise LogoutOperationError(msg) from exc
+    if not token_obj:
+        logger.warning(
+            "Suspicious activity: invalid or revoked refresh token used for logout",
+            user_id=getattr(current_user, "id", None),
+            token=mask_token(refresh_token),
+        )
+        _log_refresh_token_event(
+            event_type="suspicious",
+            user_id=getattr(current_user, "id", None),
+            token=mask_token(refresh_token),
+            details={"reason": "invalid or revoked token used for logout"},
+        )
+        msg = "No active session or already logged out."
+        raise LogoutNoSessionError(msg)
+    return token_obj
+
+
+def _validate_logout_token_owner(
+    current_user: User, token_obj: RefreshToken, refresh_token: str
+) -> None:
+    """Validate token belongs to user and isn't revoked; raise on mismatch."""
+    if token_obj.user_id != current_user.id:
+        logger.warning(
+            "Suspicious activity: refresh token user mismatch on logout",
+            user_id=getattr(current_user, "id", None),
+            token=mask_token(refresh_token),
+        )
+        _log_refresh_token_event(
+            event_type="suspicious",
+            user_id=getattr(current_user, "id", None),
+            token=mask_token(refresh_token),
+            details={"reason": "refresh token user mismatch on logout"},
+        )
+        msg = "No active session or already logged out."
+        raise LogoutNoSessionError(msg)
+    if token_obj.revoked:
+        logger.warning(
+            "Suspicious activity: revoked refresh token used for logout",
+            user_id=current_user.id,
+            token=mask_token(refresh_token),
+        )
+        _log_refresh_token_event(
+            event_type="suspicious",
+            user_id=current_user.id,
+            token=mask_token(refresh_token),
+            details={"reason": "revoked token used for logout"},
+        )
+        msg = "No active session or already logged out."
+        raise LogoutNoSessionError(msg)
+
+
+def _revoke_token_with_logging(
+    token_repo: RefreshTokenRepository, current_user: User, refresh_token: str
+) -> None:
+    """Revoke token with error mapping and structured logging."""
+    try:
+        token_repo.revoke_token(refresh_token)
+    except SQLAlchemyError as exc:
+        logger.exception(
+            "Logout DB error while revoking token",
+            user_id=current_user.id,
+            token=mask_token(refresh_token),
+            error=str(exc),
+        )
+        msg = "Logout operation failed."
+        raise LogoutOperationError(msg) from exc
+    logger.info(
+        "Refresh token revoked on logout",
+        user_id=current_user.id,
+        token=mask_token(refresh_token),
+    )
+    _log_refresh_token_event(
+        event_type="revoke",
+        user_id=current_user.id,
+        token=refresh_token,
+    )
+
+
+# Helper functions for token validation and anomaly detection
+def _validate_refresh_token(
+    token_obj: RefreshToken | None, token: str, now: datetime
+) -> None:
+    """Validate refresh token object and raise if invalid/expired/revoked."""
+    if not token_obj:
+        logger.warning(
+            "Suspicious activity: invalid or revoked refresh token used for rotation",
+            token=mask_token(token),
+        )
+        _log_refresh_token_event(
+            event_type="suspicious",
+            token=mask_token(token),
+            details={"reason": "invalid or revoked token used for rotation"},
+        )
+        msg = "Invalid or expired refresh token"
+        raise InvalidCredentialsError(msg)
+    if token_obj.revoked:
+        logger.warning(
+            "Suspicious activity: revoked refresh token used for rotation",
+            user_id=token_obj.user_id,
+            token=mask_token(token),
+        )
+        _log_refresh_token_event(
+            event_type="suspicious",
+            user_id=token_obj.user_id,
+            token=mask_token(token),
+            details={"reason": "revoked token used for rotation"},
+        )
+        msg = "Invalid or expired refresh token"
+        raise InvalidCredentialsError(msg)
+    if token_obj.expires_at < now:
+        logger.warning(
+            "Suspicious activity: expired refresh token used for rotation",
+            user_id=token_obj.user_id,
+            token=mask_token(token),
+        )
+        _log_refresh_token_event(
+            event_type="suspicious",
+            user_id=token_obj.user_id,
+            token=mask_token(token),
+            details={"reason": "expired token used for rotation"},
+        )
+        msg = "Invalid or expired refresh token"
+        raise InvalidCredentialsError(msg)
+
+
+def _detect_anomalies(
+    token_obj: RefreshToken,
+    token: str,
+    user_agent: str | None = None,
+    ip_address: str | None = None,
+) -> None:
+    """Detect anomalies comparing provided metadata with stored values."""
+    if user_agent and token_obj.user_agent and user_agent != token_obj.user_agent:
+        logger.warning(
+            "Suspicious activity: user agent anomaly detected during refresh",
+            user_id=token_obj.user_id,
+            expected=token_obj.user_agent,
+            actual=user_agent,
+        )
+        _log_refresh_token_event(
+            event_type="anomaly",
+            user_id=token_obj.user_id,
+            token=mask_token(token),
+            user_agent=user_agent,
+            ip_address=ip_address,
+            details={
+                "expected_user_agent": token_obj.user_agent,
+                "actual_user_agent": user_agent,
+            },
+        )
+    if ip_address and token_obj.ip_address and ip_address != token_obj.ip_address:
+        logger.warning(
+            "Suspicious activity: IP address anomaly detected during refresh",
+            user_id=token_obj.user_id,
+            expected=token_obj.ip_address,
+            actual=ip_address,
+        )
+        _log_refresh_token_event(
+            event_type="anomaly",
+            user_id=token_obj.user_id,
+            token=mask_token(token),
+            user_agent=user_agent,
+            ip_address=ip_address,
+            details={
+                "expected_ip_address": token_obj.ip_address,
+                "actual_ip_address": ip_address,
+            },
+        )
+
+
+def _create_refresh_token(
+    token_repo: RefreshTokenRepository,
+    user_id: int,
+    expiry: datetime,
+    user_agent: str | None,
+    ip_address: str | None,
+) -> str:
+    """Create and persist a new refresh token and return its value."""
+    new_refresh_token = token_urlsafe(64)
+    token_repo.add_token(
+        user_id,
+        new_refresh_token,
+        expiry,
+        user_agent=user_agent,
+        ip_address=ip_address,
+    )
+    return new_refresh_token

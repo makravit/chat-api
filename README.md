@@ -68,7 +68,7 @@ See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and
   # Edit .env and set your secrets and configuration
   ```
 
-> **Note:** You can configure the JWT token expiration (in minutes) using the `JWT_EXPIRE_MINUTES` environment variable. The default is 15 minutes if not set. Refresh token expiration is configurable via `REFRESH_TOKEN_EXPIRE_DAYS` (default: 1 day). The maximum refresh token lifetime is configurable via `REFRESH_TOKEN_MAX_LIFETIME_DAYS` (default: 30 days).
+> **Note:** You can configure the JWT token expiration (in minutes) using the `JWT_EXPIRE_MINUTES` environment variable. The default is 15 minutes if not set. Refresh token expiration is configurable via `REFRESH_TOKEN_EXPIRE_DAYS` (default: 1 day). The maximum refresh token lifetime is configurable via `REFRESH_TOKEN_MAX_LIFETIME_DAYS` (default: 30 days). Argon2id hashing parameters are configurable via `ARGON2_TIME_COST`, `ARGON2_MEMORY_COST` (KiB), and `ARGON2_PARALLELISM`.
 >
 > Identity claim: Access tokens include both `uid` (the numeric user id) and `sub` (the email). The backend resolves the current user strictly by `uid`; tokens missing `uid` are rejected.
 - Alembic migration scripts (`alembic/`) and config (`alembic.ini`) are mounted into containers for Alembic to work.
@@ -535,11 +535,35 @@ Logout specifics:
 ## Security Notes
 
 - Passwords are hashed using Argon2id before storage
+- Password hashing and transparent upgrades
+  - Algorithm: Argon2id via Passlib (argon2-cffi). Default parameters are environment-driven and can be tuned without code changes:
+    - `ARGON2_TIME_COST` (default: 3)
+    - `ARGON2_MEMORY_COST` in KiB (default: 65536 — 64 MiB)
+    - `ARGON2_PARALLELISM` (default: 2)
+  - Rehash-on-verify: when a password is successfully verified but the stored hash is considered outdated (e.g., weaker algorithm/parameters), the hash is transparently re-computed and persisted best-effort during login. Authentication is never blocked by a failed rehash persist; the event is logged at debug level.
+  - Rationale: avoids bcrypt’s 72-byte truncation pitfalls and allows progressive hardening over time without forcing password resets.
 - JWT tokens are used for authentication; keep your `SECRET_KEY` safe in production
 - Refresh tokens are secure random strings, single-use, rotated on each refresh, and tied to session metadata (user agent, IP)
 - Sliding expiration is enforced: each rotation extends expiry up to a max lifetime
 - Suspicious activity logging is implemented for all refresh token operations
 - The provided Dockerfile runs the app as a non-root user for security
+
+### Argon2 defaults (keep it simple)
+
+To avoid environment drift and keep behavior consistent, we recommend using the same
+baseline across all environments (dev, CI, prod) and only tuning if you actually
+observe performance issues:
+
+- `ARGON2_TIME_COST=3`
+- `ARGON2_MEMORY_COST=65536` (64 MiB)
+- `ARGON2_PARALLELISM=2`
+
+Notes:
+- Memory cost is in KiB. Higher values increase CPU/memory per hash. On very small
+  runners or containers, you can temporarily reduce `ARGON2_TIME_COST` to 2 after
+  measuring test duration. For most setups, the baseline above is sufficient.
+- Rehash-on-verify means increasing these values later will transparently upgrade
+  stored hashes on the next successful login without forcing password resets.
 
 Auth tokens and identity:
 - Access tokens include both `uid` and `sub`. The API uses `uid` as the canonical identity claim to load users by primary key. This avoids ambiguity if emails change. If a token lacks `uid` or references a non-existent user id, the request is rejected with 401.

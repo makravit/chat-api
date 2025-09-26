@@ -169,7 +169,10 @@ db.assert_committed_once()
 - Store secrets securely (never commit them)
 - Validate and sanitize all user input
 - Use authentication and authorization for protected endpoints
- - Password hashing: prefer Argon2id via Passlib for new code. Keep settings memory-hard and tuned for production; tests should remain algorithm-agnostic (use `hash_password` / `verify_password`).
+ - Password hashing
+	 - Prefer Argon2id via Passlib for new code. Keep settings memory-hard and tuned for production (e.g., time_cost≈3, memory_cost≈64 MiB, parallelism≈2; adjust per environment).
+	 - Implement rehash-on-verify: when `verify_password` succeeds but `needs_rehash` returns True, recompute and persist the hash opportunistically. Do not block authentication on rehash persistence failures; log at debug and continue.
+	 - Keep tests algorithm-agnostic: import and use `hash_password` / `verify_password` helpers in tests instead of hard-coding algorithms, and mock `needs_rehash` when validating upgrade flows.
 
 ## Logging & Metrics
 - Use structlog; never use `print` or debugger statements in committed code.

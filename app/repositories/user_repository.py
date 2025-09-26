@@ -59,3 +59,19 @@ class UserRepository:
         self.db.commit()
         self.db.refresh(user)
         return user
+
+    def update_password(
+        self: "UserRepository", user_id: int, new_hashed_password: str
+    ) -> None:
+        """Update the stored password hash for a user.
+
+        Args:
+            user_id: The user's ID.
+            new_hashed_password: The new password hash to store.
+        """
+        user = self.get_by_id(user_id)
+        if not user:
+            return
+        user.hashed_password = new_hashed_password
+        self.db.add(user)
+        self.db.commit()

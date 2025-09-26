@@ -27,9 +27,9 @@ ALGORITHM: str = "HS256"
 pwd_context = CryptContext(
     schemes=["argon2"],
     deprecated="auto",
-    argon2__time_cost=3,
-    argon2__memory_cost=65536,  # 64 MiB
-    argon2__parallelism=2,
+    argon2__time_cost=settings.ARGON2_TIME_COST,
+    argon2__memory_cost=settings.ARGON2_MEMORY_COST,
+    argon2__parallelism=settings.ARGON2_PARALLELISM,
 )
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
 security = HTTPBasic()
@@ -43,6 +43,14 @@ def hash_password(password: str) -> str:
 def verify_password(plain: str, hashed: str) -> bool:
     """Verify that a plaintext password matches a stored hash."""
     return pwd_context.verify(plain, hashed)
+
+
+def needs_rehash(hashed: str) -> bool:
+    """Return True if the stored hash should be upgraded with current settings.
+
+    Useful for transparent hash upgrades during login after tuning Argon2 parameters.
+    """
+    return pwd_context.needs_update(hashed)
 
 
 def create_access_token(data: Mapping[str, object]) -> str:

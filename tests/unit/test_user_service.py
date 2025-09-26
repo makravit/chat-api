@@ -67,6 +67,69 @@ def test_authenticate_user_success() -> None:
     token_repo_mock.add_token.assert_called_once()
 
 
+def test_authenticate_user_triggers_rehash_on_verify(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    email = "rehash@example.com"
+    password = build_password(PasswordKind.VALID)
+    db_user = MagicMock(email=email, hashed_password=hash_password(password), id=42)
+    repo_mock = MagicMock(get_by_email=MagicMock(return_value=db_user))
+    token_repo_mock = MagicMock()
+    # Force needs_rehash to return True so the helper runs
+    monkeypatch.setattr("app.services.user_service.needs_rehash", lambda _h: True)
+    with (
+        patch("app.services.user_service.UserRepository", return_value=repo_mock),
+        patch(
+            "app.services.user_service.RefreshTokenRepository",
+            return_value=token_repo_mock,
+        ),
+    ):
+        access_token, refresh_token = authenticate_user(
+            email,
+            password,
+            make_dummy_db(),
+            user_agent="ua",
+            ip_address="127.0.0.1",
+        )
+    assert access_token
+    assert refresh_token
+    # Ensure rehash persisted
+    assert repo_mock.update_password.called
+    args, _ = repo_mock.update_password.call_args
+    assert args[0] == 42
+    assert isinstance(args[1], str)
+    assert args[1] != db_user.hashed_password
+
+
+def test_authenticate_user_rehash_failure_does_not_block_login(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    email = "rehash-fail@example.com"
+    password = build_password(PasswordKind.VALID)
+    db_user = MagicMock(email=email, hashed_password=hash_password(password), id=7)
+    repo_mock = MagicMock(
+        get_by_email=MagicMock(return_value=db_user),
+        update_password=MagicMock(side_effect=SQLAlchemyError("db write failed")),
+    )
+    token_repo_mock = MagicMock()
+    monkeypatch.setattr("app.services.user_service.needs_rehash", lambda _h: True)
+    with (
+        patch("app.services.user_service.UserRepository", return_value=repo_mock),
+        patch(
+            "app.services.user_service.RefreshTokenRepository",
+            return_value=token_repo_mock,
+        ),
+    ):
+        # Should still succeed even if update_password raises
+        access_token, refresh_token = authenticate_user(
+            email,
+            password,
+            make_dummy_db(),
+        )
+    assert isinstance(access_token, str)
+    assert isinstance(refresh_token, str)
+
+
 def test_authenticate_user_wrong_password() -> None:
     email = "test@example.com"
     repo_mock = MagicMock(
