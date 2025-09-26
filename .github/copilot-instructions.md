@@ -169,6 +169,7 @@ db.assert_committed_once()
 - Store secrets securely (never commit them)
 - Validate and sanitize all user input
 - Use authentication and authorization for protected endpoints
+ - Password hashing: prefer Argon2id via Passlib for new code. Keep settings memory-hard and tuned for production; tests should remain algorithm-agnostic (use `hash_password` / `verify_password`).
 
 ## Logging & Metrics
 - Use structlog; never use `print` or debugger statements in committed code.

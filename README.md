@@ -57,7 +57,7 @@ See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and
   - Sliding expiration: each rotation extends expiry up to a maximum lifetime
   - Session metadata (user agent, IP) is stored for each token
   - Logout endpoint supports per-session and "logout everywhere" revocation
-- Password hashing (using `passlib[bcrypt]`)
+- Password hashing (using Argon2id via Passlib)
 - Full unit and integration test suite (pytest)
 - 100% code coverage enforced (pytest-cov)
 - Integration tests use Testcontainers for ephemeral PostgreSQL DBs; no Docker Compose needed for testing.
@@ -534,7 +534,7 @@ Logout specifics:
 
 ## Security Notes
 
-- Passwords are hashed using bcrypt before storage
+- Passwords are hashed using Argon2id before storage
 - JWT tokens are used for authentication; keep your `SECRET_KEY` safe in production
 - Refresh tokens are secure random strings, single-use, rotated on each refresh, and tied to session metadata (user agent, IP)
 - Sliding expiration is enforced: each rotation extends expiry up to a max lifetime
@@ -562,7 +562,7 @@ Key production dependencies:
 - fastapi
 - uvicorn[standard]
 - python-jose
-- passlib[bcrypt]
+- passlib (with argon2-cffi)
 - pydantic[email]
 - pydantic-settings
 - sqlalchemy

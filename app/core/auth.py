@@ -22,13 +22,21 @@ from app.models.user import User
 
 SECRET_KEY: str = settings.SECRET_KEY
 ALGORITHM: str = "HS256"
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Use Argon2id for password hashing (memory-hard, OWASP-recommended).
+# Requires `argon2-cffi` dependency. Tuned for a good balance of security & speed.
+pwd_context = CryptContext(
+    schemes=["argon2"],
+    deprecated="auto",
+    argon2__time_cost=3,
+    argon2__memory_cost=65536,  # 64 MiB
+    argon2__parallelism=2,
+)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
 security = HTTPBasic()
 
 
 def hash_password(password: str) -> str:
-    """Hash a plaintext password using a secure algorithm (bcrypt)."""
+    """Hash a plaintext password using Argon2id."""
     return pwd_context.hash(password)
 
 
