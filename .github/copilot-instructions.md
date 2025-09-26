@@ -14,11 +14,11 @@ This file provides future-facing guidelines for contributors and Copilot to impl
 - Docker (containerization)
 
 ## Folder Structure
-- `api/`: Route definitions
-- `core/`: Core utilities (auth, config, database, logging, exceptions)
-- `models/`: ORM models
-- `schemas/`: Pydantic schemas
-- `services/`: Business logic and data access
+- `app/api/`: Route definitions
+- `app/core/`: Core utilities (auth, config, database, logging, exceptions)
+- `app/models/`: ORM models
+- `app/schemas/`: Pydantic schemas
+- `app/services/`: Business logic and data access
 
 ## Coding Guidelines
 - Use dependency injection via FastAPI's `Depends` for services and repositories
@@ -36,6 +36,20 @@ When adding new endpoints or features:
 - Use Pydantic models for request/response validation
 - Add docstrings and OpenAPI documentation
 - Ensure new code is covered by tests and passes linting
+
+### New endpoint checklist
+- Define request/response models under `app/schemas/*`.
+- Keep route handlers thin; implement logic in `app/services/*`.
+- Authentication/authorization: clarify requirements and enforce in dependencies.
+- Map domain errors to consistent API errors (see README error schema); document status codes.
+- Add unit tests for services and focused route tests; keep 100% coverage.
+- Provide clear docstrings and OpenAPI descriptions; include examples when helpful.
+
+### Database change checklist
+- Update SQLAlchemy models under `app/models/*`.
+- Generate Alembic migration with `--autogenerate`, review carefully, and ensure safe downgrade.
+- Include data backfills as explicit ops (don’t hide them in autogenerate).
+- Update tests and fixtures affected by schema changes.
 
 ## Contribution & Maintenance
 - Keep code modular, well-documented, and consistent with best practices
@@ -102,14 +116,7 @@ The project’s canonical style and checks are enforced by Ruff (configured in `
 	- `app/core/config.py`: allow S105 (dev/local defaults only; no real secrets).
 	- `app/schemas/user.py`: allow S105 for constant token type ("bearer").
 
-Run locally:
-
-```sh
-poetry run pre-commit run --all-files
-poetry run ruff check .
-poetry run ruff format .
-poetry run pyright app tests
-```
+Commands: see README “Running Tests & Code Quality” for the canonical Poetry invocations (tests, lint/format, type-check).
 
 CI and local development both expect 100% test coverage. Keep code changes small and tested.
 
@@ -163,6 +170,16 @@ db.assert_committed_once()
 - Validate and sanitize all user input
 - Use authentication and authorization for protected endpoints
 
+## Logging & Metrics
+- Use structlog; never use `print` or debugger statements in committed code.
+- Do not log secrets, access tokens, or refresh tokens.
+- When adding metrics, keep labels low-cardinality and stable.
+
+## Configuration
+- Any new env var must be added to `.env.example` and documented in the README.
+- Keep dev defaults only in `app/core/config.py`; real secrets come from the environment.
+- Validate configuration via Pydantic settings; fail fast on missing required values.
+
 ## API Documentation
 - Use FastAPI's built-in OpenAPI/Swagger docs
 - Version endpoints under `/api/v1/`
@@ -170,6 +187,11 @@ db.assert_committed_once()
 ## References
 - See `docs/user-stories.md` for requirements and acceptance criteria
 - See README for setup and usage instructions
+
+## Authoritative sources
+- Commands and local workflows: README → “Running Tests & Code Quality”, “Running the app locally”, and “Database Migrations”.
+- Contribution workflow & checklist: `CONTRIBUTING.md`.
+- Style, linting, ignores, and policy: this file and `pyproject.toml` (Ruff/Pyright).
 
 ## Import Organization
 Always import libraries only at the top of each file. Group imports in this order:

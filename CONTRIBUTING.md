@@ -1,65 +1,22 @@
-# Contributing to FastAPI Chat API (concise)
+# Contributing to FastAPI Chat API
 
-Thanks for contributing! This document keeps only the essentials and points to the README for full details.
+Thanks for contributing! This guide is intentionally lean. For setup, architecture, commands, and migrations, see README.md.
 
-For architecture, setup, run modes (Docker vs local), environment variables, and migration workflows, see README.md.
+## Contributor Checklist
 
-## Prerequisites
-- Python 3.13
-- Poetry (dependency + virtualenv)
-- Docker (optional)
+Before opening a PR, please ensure:
 
-Install Poetry (one-time): see README for commands or use Homebrew on macOS:
-```sh
-brew install poetry
-```
+- [ ] Run pre-commit hooks: `poetry run pre-commit run --all-files`
+- [ ] Ensure tests pass locally with 100% coverage
+- [ ] Follow Ruff style rules (py313, line length 88, double quotes); no `print`/debugger
+- [ ] Use absolute imports only (relative imports are banned by Ruff)
+- [ ] Add Google-style docstrings for new/changed code under `app/**`
+- [ ] Keep dependency constraints within-major (e.g., `>=2.7.1,<3.0.0`), and run `poetry update`
+- [ ] Update docs and `.env.example` for new env vars or behavior
+- [ ] Include Alembic migration if the schema changed
 
-## Quick start
-```sh
-poetry install
-poetry run pre-commit install
-```
+## Quality gates
 
-To run the app or database locally (and for Docker Compose usage), follow the instructions in README.md.
+CI enforces linting, type-checking, and 100% test coverage. Keep PRs small and focused with tests.
 
-## Local checks (before every commit)
-```sh
-poetry run pre-commit run --all-files
-poetry run ruff check .
-poetry run ruff format .
-poetry run pyright app tests
-poetry run pytest --cov=app --cov-report=term-missing --cov-report=html
-```
-
-Guidelines:
-- Style: Ruff is canonical (including import sorting). Absolute imports only.
-- Docstrings: Google style for public modules/classes/functions under `app/**`.
-- Typing: Pyright must pass with zero errors (app and tests).
-  - Use `from __future__ import annotations`.
-  - Put type-only imports under `if TYPE_CHECKING:`.
-  - For frameworks that evaluate annotations at runtime (e.g., SQLAlchemy), ensure referenced names exist at runtime (runtime alias) or use a minimal targeted ignore where appropriate.
-
-## Tests
-- Keep tests small and focused. Use helpers in `tests/utils.py`.
-- CI expects 100% coverage for `app/**`.
-
-## Migrations
-- Alembic is used for migrations. See README for the full workflow.
-
-## Security
-- Never commit secrets. Use environment variables (`.env`).
-- Update `.env.example` when introducing new config.
-
-## Pull requests
-- Small, focused changes with tests.
-- Ensure the local checks above pass.
-- Include docstrings for new/changed public APIs.
-- Add migrations or `.env.example` updates when needed.
-
-## CI (summary)
-- On push/PR to `main`:
-  - Pre-commit hooks
-  - Pytest with coverage (100% enforced)
-  - Build Docker image (push from `main` when secrets available)
-
-Questions? Open an issue or a draft PR and ask for feedback.
+Questions? Open an issue or a draft PR for feedback.

@@ -77,32 +77,6 @@ See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and
 
 See CONTRIBUTING for full details: [CONTRIBUTING.md](CONTRIBUTING.md)
 
-Quick start for contributors:
-
-```sh
-# Install dependencies (requires Poetry)
-poetry install
-
-# Install pre-commit hooks and run them
-poetry run pre-commit install
-poetry run pre-commit run --all-files
-
-# Run tests with coverage (CI enforces 100%)
-poetry run pytest --cov=app --cov-report=term-missing --cov-report=html
-```
-
-### Contributor checklist
-
-Before opening a PR, please:
-
-- [ ] Run pre-commit hooks: `poetry run pre-commit run --all-files`
-- [ ] Ensure tests pass locally with 100% coverage
-- [ ] Follow Ruff style rules (py313, line length 88, double quotes); no `print`/debugger
-- [ ] Use absolute imports only (relative imports are banned by Ruff)
-- [ ] Add Google-style docstrings for new/changed code under `app/**`
-- [ ] Keep dependency constraints within-major (e.g., `>=2.7.1,<3.0.0`), and run `poetry update`
-- [ ] Update docs and `.env.example` for new env vars or behavior
-- [ ] Include Alembic migration if the schema changed
 
 
 ## Project Structure
@@ -125,50 +99,7 @@ docs/
 ```
 
 
-## Quickstart
 
-You can run the app in two ways:
-
-### Option A — Docker Compose
-
-1. Build and start the app and database with Docker Compose:
-  ```sh
-  docker compose up --build
-  ```
-  - The app will be available at [http://localhost:8000](http://localhost:8000)
-  - Interactive API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-  - Database migrations are applied automatically on startup.
-  - Note: Inside containers, the app connects to the database at host `db` (Compose network).
-
-2. To stop and remove containers:
-  ```sh
-  docker compose down
-  ```
-
-### Option B — Run locally with Poetry
-
-Use this when you want to develop without Docker:
-
-1. Ensure dependencies are installed:
-  ```sh
-  poetry install
-  ```
-2. Ensure your local `.env` has a host connection string (localhost):
-  ```env
-  DATABASE_URL=postgresql://chatbot:chatbotpass@localhost:5432/chatbotdb
-  ```
-3. Run the app with auto-reload:
-  ```sh
-  poetry run uvicorn app.main:app --reload
-  ```
-  - API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-  - Apply migrations as needed:
-    ```sh
-    poetry run alembic upgrade head
-    ```
-   - Prerequisite: make sure a local PostgreSQL server is running and reachable at the
-     connection string above. Docker Compose handles starting Postgres for you, but
-     when running locally you must provide your own database instance.
 
 
 ## Dependency Management
@@ -230,6 +161,52 @@ To apply migrations:
 ```sh
 poetry run alembic upgrade head
 ```
+
+
+## Running the app locally
+
+You can run the app in two ways:
+
+### Option A — Docker Compose
+
+1. Build and start the app and database with Docker Compose:
+  ```sh
+  docker compose up --build
+  ```
+  - The app will be available at [http://localhost:8000](http://localhost:8000)
+  - Interactive API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+  - Database migrations are applied automatically on startup.
+  - Note: Inside containers, the app connects to the database at host `db` (Compose network).
+
+2. To stop and remove containers:
+  ```sh
+  docker compose down
+  ```
+
+### Option B — Run locally with Poetry
+
+Use this when you want to develop without Docker:
+
+1. Ensure dependencies are installed:
+  ```sh
+  poetry install
+  ```
+2. Ensure your local `.env` has a host connection string (localhost):
+  ```env
+  DATABASE_URL=postgresql://chatbot:chatbotpass@localhost:5432/chatbotdb
+  ```
+3. Run the app with auto-reload:
+  ```sh
+  poetry run uvicorn app.main:app --reload
+  ```
+  - API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+  - Apply migrations as needed:
+    ```sh
+    poetry run alembic upgrade head
+    ```
+   - Prerequisite: make sure a local PostgreSQL server is running and reachable at the
+     connection string above. Docker Compose handles starting Postgres for you, but
+     when running locally you must provide your own database instance.
 
 ### Rollback (downgrade) examples
 
