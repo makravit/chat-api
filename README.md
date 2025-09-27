@@ -152,6 +152,19 @@ Keep dependencies current with a few simple commands:
 
 Note: Poetry respects the version ranges in `pyproject.toml` (e.g., `>=2.7.1,<3.0.0`). To adopt a new major version, widen the range first, then run your tests to validate. For details, see the [Poetry docs](https://python-poetry.org/docs/cli/#update).
 
+Quick reminders:
+
+- After updating, run tests:
+  ```sh
+  poetry run pytest
+  ```
+
+- Before building Docker images after dependency changes, refresh the lockfile:
+  ```sh
+  poetry lock
+  ```
+  This keeps `poetry.lock` in sync and prevents Docker build errors (images install from the lockfile).
+
 
 ## Database Migrations
 
@@ -608,17 +621,6 @@ Key development dependencies:
 - testcontainers[postgresql]
 - wheel
 - pyright
-
-
-## Poetry & Docker builds
-
-If you change dependencies in `pyproject.toml`, always run:
-
-```sh
-poetry lock
-```
-
-before building Docker images. This ensures `poetry.lock` matches your dependencies and avoids build errors.
 
 
 ## CI/CD
