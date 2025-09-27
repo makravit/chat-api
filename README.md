@@ -133,19 +133,24 @@ poetry install
 ```
 ## Updating Packages
 
-To update all dependencies to their latest allowed versions, run:
+Keep dependencies current with a few simple commands:
 
-```bash
-poetry update
-```
+- List what’s outdated:
+  ```sh
+  poetry show -o
+  ```
 
-This will update the packages specified in `pyproject.toml` and refresh the `poetry.lock` file. To update a specific package, use:
+- Update all packages (within allowed version ranges):
+  ```sh
+  poetry update
+  ```
 
-```bash
-poetry update <package-name>
-```
+- Update a single package:
+  ```sh
+  poetry update <package-name>
+  ```
 
-For more details, see the [Poetry documentation](https://python-poetry.org/docs/cli/#update).
+Note: Poetry respects the version ranges in `pyproject.toml` (e.g., `>=2.7.1,<3.0.0`). To adopt a new major version, widen the range first, then run your tests to validate. For details, see the [Poetry docs](https://python-poetry.org/docs/cli/#update).
 
 
 ## Database Migrations
