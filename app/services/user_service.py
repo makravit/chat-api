@@ -121,41 +121,17 @@ def rotate_refresh_token(
     # token_obj is validated to be not None by _validate_refresh_token
     token_typed = cast("RefreshToken", token_obj)
     _detect_anomalies(token_typed, old_refresh_token, user_agent, ip_address)
-    # Revoke old token (single-use)
-    token_repo.revoke_token(old_refresh_token)
-    _log_refresh_token_event(
-        event_type="rotate",
-        user_id=token_typed.user_id,
-        token=mask_token(old_refresh_token),
-        user_agent=user_agent,
-        ip_address=ip_address,
+    _revoke_old_token_and_log_rotate(
+        token_repo, token_typed, old_refresh_token, user_agent, ip_address
     )
     user_id = token_typed.user_id
     user_repo = UserRepository(db)
-    db_user = user_repo.get_by_id(user_id)
-    if not db_user:
-        logger.warning(
-            "Suspicious activity: user not found for refresh token",
-            user_id=user_id,
-        )
-        _log_refresh_token_event(
-            event_type="suspicious",
-            user_id=user_id,
-            token=mask_token(old_refresh_token),
-            details={"reason": "user not found for refresh token"},
-        )
-        msg = "User not found"
-        raise InvalidCredentialsError(msg)
+    db_user = _get_user_or_raise(user_repo, user_id, old_refresh_token)
     access_token = issue_access_token(db_user)
     # Sliding expiration: extend expiry on rotation, but never exceed max lifetime
-
-    refresh_expiry_days = settings.REFRESH_TOKEN_EXPIRE_DAYS
-    max_lifetime_days = settings.REFRESH_TOKEN_MAX_LIFETIME_DAYS
-    # Calculate max expiry from original token creation
-    max_expiry = token_typed.created_at + timedelta(days=max_lifetime_days)
-    # Calculate new expiry (sliding window)
-    requested_expiry = now + timedelta(days=refresh_expiry_days)
-    new_expiry = min(requested_expiry, max_expiry)
+    new_expiry = _compute_sliding_refresh_expiry(
+        created_at=token_typed.created_at, now=now
+    )
     new_refresh_token = _create_refresh_token(
         token_repo,
         user_id,
@@ -177,6 +153,65 @@ def rotate_refresh_token(
         details={"expires_at": new_expiry.isoformat()},
     )
     return access_token, new_refresh_token
+
+
+def _revoke_old_token_and_log_rotate(
+    token_repo: RefreshTokenRepository,
+    token_obj: RefreshToken,
+    old_refresh_token: str,
+    user_agent: str | None,
+    ip_address: str | None,
+) -> None:
+    """Revoke the old refresh token and log a rotation event.
+
+    This encapsulates the single-use revocation semantics and uniform logging.
+    """
+    # Revoke old token (single-use)
+    token_repo.revoke_token(old_refresh_token)
+    _log_refresh_token_event(
+        event_type="rotate",
+        user_id=token_obj.user_id,
+        token=mask_token(old_refresh_token),
+        user_agent=user_agent,
+        ip_address=ip_address,
+    )
+
+
+def _get_user_or_raise(
+    user_repo: UserRepository, user_id: int, old_refresh_token: str
+) -> User:
+    """Fetch user by id or raise InvalidCredentialsError with logging.
+
+    Logs a suspicious event if the user is missing for a valid refresh token.
+    """
+    db_user = user_repo.get_by_id(user_id)
+    if db_user:
+        return db_user
+    logger.warning(
+        "Suspicious activity: user not found for refresh token",
+        user_id=user_id,
+    )
+    _log_refresh_token_event(
+        event_type="suspicious",
+        user_id=user_id,
+        token=mask_token(old_refresh_token),
+        details={"reason": "user not found for refresh token"},
+    )
+    msg = "User not found"
+    raise InvalidCredentialsError(msg)
+
+
+def _compute_sliding_refresh_expiry(*, created_at: datetime, now: datetime) -> datetime:
+    """Compute the new refresh token expiry using sliding-window semantics.
+
+    The new expiry extends by REFRESH_TOKEN_EXPIRE_DAYS from now, capped by
+    REFRESH_TOKEN_MAX_LIFETIME_DAYS from the original token creation.
+    """
+    refresh_expiry_days = settings.REFRESH_TOKEN_EXPIRE_DAYS
+    max_lifetime_days = settings.REFRESH_TOKEN_MAX_LIFETIME_DAYS
+    max_expiry = created_at + timedelta(days=max_lifetime_days)
+    requested_expiry = now + timedelta(days=refresh_expiry_days)
+    return min(requested_expiry, max_expiry)
 
 
 def _log_refresh_token_event(

@@ -68,7 +68,7 @@ See [`docs/user-stories.md`](docs/user-stories.md) for detailed requirements and
   # Edit .env and set your secrets and configuration
   ```
 
-> **Note:** You can configure the JWT token expiration (in minutes) using the `JWT_EXPIRE_MINUTES` environment variable. The default is 15 minutes if not set. Refresh token expiration is configurable via `REFRESH_TOKEN_EXPIRE_DAYS` (default: 1 day). The maximum refresh token lifetime is configurable via `REFRESH_TOKEN_MAX_LIFETIME_DAYS` (default: 30 days). Argon2id hashing parameters are configurable via `ARGON2_TIME_COST`, `ARGON2_MEMORY_COST` (KiB), and `ARGON2_PARALLELISM`.
+> **Note:** You can configure the JWT token expiration (in minutes) using the `JWT_EXPIRE_MINUTES` environment variable. The default is 5 minutes if not set. Refresh token expiration is configurable via `REFRESH_TOKEN_EXPIRE_DAYS` (default: 1 day). The maximum refresh token lifetime is configurable via `REFRESH_TOKEN_MAX_LIFETIME_DAYS` (default: 30 days). Argon2id hashing parameters are configurable via `ARGON2_TIME_COST`, `ARGON2_MEMORY_COST` (KiB), and `ARGON2_PARALLELISM`.
 >
 > Identity claim: Access tokens include both `uid` (the numeric user id) and `sub` (the email). The backend resolves the current user strictly by `uid`; tokens missing `uid` are rejected.
 - Alembic migration scripts (`alembic/`) and config (`alembic.ini`) are mounted into containers for Alembic to work.

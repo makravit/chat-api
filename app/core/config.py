@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"  # Configurable log level, e.g., DEBUG, INFO, WARNING, ERROR
     METRICS_USER: str = "metrics"
     METRICS_PASS: str = "metrics"
-    JWT_EXPIRE_MINUTES: int = 15  # JWT expiration in minutes (default: 15)
+    JWT_EXPIRE_MINUTES: int = 5  # JWT expiration in minutes (default: 5)
     REFRESH_TOKEN_EXPIRE_DAYS: int = 1
     REFRESH_TOKEN_MAX_LIFETIME_DAYS: int = 30
     ARGON2_TIME_COST: int = 3

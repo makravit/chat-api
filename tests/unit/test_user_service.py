@@ -400,9 +400,15 @@ def test_rotate_refresh_token_success_and_single_use() -> None:
     assert isinstance(rtok, str)
     token_repo.revoke_token.assert_called_once_with("oldtoken")
     token_repo.add_token.assert_called_once()
+    # Validate user agent and IP propagated to add_token
+    _, kwargs = token_repo.add_token.call_args
+    assert kwargs.get("user_agent") == "test-agent"
+    assert kwargs.get("ip_address") == "127.0.0.1"
 
 
-def test_rotate_refresh_token_anomaly_logs_but_succeeds() -> None:
+def test_rotate_refresh_token_anomaly_logs_but_succeeds(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     valid = _build_token(user_id=1, ua="expected", ip="1.2.3.4")
     token_repo = MagicMock(get_valid_token=MagicMock(return_value=valid))
     user_repo = MagicMock(
@@ -415,6 +421,7 @@ def test_rotate_refresh_token_anomaly_logs_but_succeeds() -> None:
         ),
         patch("app.services.user_service.UserRepository", return_value=user_repo),
     ):
+        caplog.set_level("WARNING")
         atok, rtok = rotate_refresh_token(
             "old",
             make_dummy_db(),
@@ -424,6 +431,11 @@ def test_rotate_refresh_token_anomaly_logs_but_succeeds() -> None:
     assert isinstance(atok, str)
     assert isinstance(rtok, str)
     assert token_repo.revoke_token.called
+    # Two warnings expected: UA anomaly and IP anomaly
+    warnings = [rec for rec in caplog.records if rec.levelname == "WARNING"]
+    # We can't rely on exact message text from structlog JSON,
+    # but ensure at least two WARNINGs logged
+    assert len(warnings) >= 2
 
 
 def test_rotate_refresh_token_sliding_expiration(
@@ -457,3 +469,135 @@ def test_rotate_refresh_token_sliding_expiration(
     #  optional user_agent, optional ip_address)
     new_expiry = args[2]
     assert new_expiry <= valid.created_at + timedelta(days=10)
+
+
+def test_rotate_refresh_token_anomaly_ip_only_logs_but_succeeds(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """If only IP mismatches, rotation still succeeds (anomaly is logged)."""
+    valid = _build_token(user_id=1, ua="expected", ip="1.2.3.4")
+    token_repo = MagicMock(get_valid_token=MagicMock(return_value=valid))
+    user_repo = MagicMock(
+        get_by_id=MagicMock(return_value=SimpleNamespace(id=1, email="e@x.com")),
+    )
+    with (
+        patch(
+            "app.services.user_service.RefreshTokenRepository",
+            return_value=token_repo,
+        ),
+        patch("app.services.user_service.UserRepository", return_value=user_repo),
+    ):
+        caplog.set_level("WARNING")
+        atok, rtok = rotate_refresh_token(
+            "old",
+            make_dummy_db(),
+            user_agent="expected",  # matches
+            ip_address="9.9.9.9",  # mismatch
+        )
+    assert isinstance(atok, str)
+    assert isinstance(rtok, str)
+    token_repo.revoke_token.assert_called_once_with("old")
+    token_repo.add_token.assert_called_once()
+    warnings = [rec for rec in caplog.records if rec.levelname == "WARNING"]
+    assert len(warnings) >= 1
+
+
+def test_rotate_refresh_token_no_metadata_provided_succeeds() -> None:
+    """Rotation succeeds even if client omits UA/IP; no anomaly should be triggered."""
+    valid = _build_token(user_id=1, ua="some-ua", ip="10.0.0.1")
+    token_repo = MagicMock(get_valid_token=MagicMock(return_value=valid))
+    user_repo = MagicMock(
+        get_by_id=MagicMock(return_value=SimpleNamespace(id=1, email="e@x.com")),
+    )
+    with (
+        patch(
+            "app.services.user_service.RefreshTokenRepository",
+            return_value=token_repo,
+        ),
+        patch("app.services.user_service.UserRepository", return_value=user_repo),
+    ):
+        atok, rtok = rotate_refresh_token(
+            "old",
+            make_dummy_db(),
+            user_agent=None,
+            ip_address=None,
+        )
+    assert isinstance(atok, str)
+    assert isinstance(rtok, str)
+    token_repo.revoke_token.assert_called_once_with("old")
+    token_repo.add_token.assert_called_once()
+
+
+def test_rotate_refresh_token_anomaly_ua_only_logs_but_succeeds(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """If only UA mismatches, rotation still succeeds (anomaly is logged)."""
+    valid = _build_token(user_id=1, ua="expected", ip="1.2.3.4")
+    token_repo = MagicMock(get_valid_token=MagicMock(return_value=valid))
+    user_repo = MagicMock(
+        get_by_id=MagicMock(return_value=SimpleNamespace(id=1, email="e@x.com")),
+    )
+    with (
+        patch(
+            "app.services.user_service.RefreshTokenRepository",
+            return_value=token_repo,
+        ),
+        patch("app.services.user_service.UserRepository", return_value=user_repo),
+    ):
+        caplog.set_level("WARNING")
+        atok, rtok = rotate_refresh_token(
+            "old",
+            make_dummy_db(),
+            user_agent="unexpected",  # mismatch
+            ip_address="1.2.3.4",  # matches
+        )
+    assert isinstance(atok, str)
+    assert isinstance(rtok, str)
+    token_repo.revoke_token.assert_called_once_with("old")
+    token_repo.add_token.assert_called_once()
+    warnings = [rec for rec in caplog.records if rec.levelname == "WARNING"]
+    assert len(warnings) >= 1
+
+
+def test_rotate_refresh_token_sliding_within_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When max lifetime is not limiting, expiry should be now + EXPIRE_DAYS."""
+    # Fix 'now' used inside app.services.user_service
+    fixed_now = datetime(2025, 1, 1, tzinfo=UTC)
+
+    class FixedDatetime(datetime):  # type: ignore[misc]
+        @classmethod
+        def now(cls, tz: object | None = None) -> datetime:  # pragma: no cover - shim
+            return fixed_now if tz is None else fixed_now.astimezone(tz)  # type: ignore[arg-type]
+
+    monkeypatch.setattr("app.services.user_service.datetime", FixedDatetime)
+
+    # Configure settings: EXPIRE=7 days, MAX_LIFETIME=30 days
+    monkeypatch.setattr(cfg.settings, "REFRESH_TOKEN_EXPIRE_DAYS", 7)
+    monkeypatch.setattr(cfg.settings, "REFRESH_TOKEN_MAX_LIFETIME_DAYS", 30)
+
+    # Token created 1 day ago, not near max lifetime
+    valid_token = SimpleNamespace(
+        user_id=1,
+        revoked=False,
+        expires_at=fixed_now + timedelta(minutes=10),
+        created_at=fixed_now - timedelta(days=1),
+        user_agent=None,
+        ip_address=None,
+    )
+    token_repo = MagicMock(get_valid_token=MagicMock(return_value=valid_token))
+    user_repo = MagicMock(
+        get_by_id=MagicMock(return_value=SimpleNamespace(id=1, email="e@x.com")),
+    )
+    with (
+        patch(
+            "app.services.user_service.RefreshTokenRepository", return_value=token_repo
+        ),
+        patch("app.services.user_service.UserRepository", return_value=user_repo),
+    ):
+        rotate_refresh_token("old", make_dummy_db())
+    assert token_repo.add_token.called
+    args, _ = token_repo.add_token.call_args
+    new_expiry = args[2]
+    assert new_expiry == fixed_now + timedelta(days=7)
