@@ -304,16 +304,6 @@ poetry run pre-commit run --all-files
 Pre-commit runs Ruff, Pyright, and other checks. Fixes may be applied automatically by Ruff; re-run until all hooks pass.
 
 
-### Suppress DeprecationWarnings during tests (optional)
-
-To hide deprecation warnings in your test output, add a `pytest.ini` file to your project root with:
-
-```ini
-[pytest]
-filterwarnings =
-    ignore::DeprecationWarning
-```
-
 ### Testing helpers
 
 To keep tests small and consistent, use the helper factories in `tests/utils.py`:

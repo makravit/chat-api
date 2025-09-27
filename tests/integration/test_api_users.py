@@ -316,32 +316,22 @@ def test_refresh_token_success(
     rtok0 = tokens["refresh_token"]
     assert isinstance(rtok0, str)
     # Use cookie for refresh
-    resp = client.post(
-        "/api/v1/users/refresh-token",
-        cookies={
-            "refresh_token": rtok0,
-        },
-    )
+    client.cookies.set("refresh_token", rtok0)
+    resp = client.post("/api/v1/users/refresh-token")
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data
     assert data["token_type"] == join_parts("bearer")
-    resp2 = client.post(
-        "/api/v1/users/refresh-token",
-        cookies={
-            "refresh_token": rtok0,
-        },
-    )
+    client.cookies.set("refresh_token", rtok0)
+    resp2 = client.post("/api/v1/users/refresh-token")
     assert resp2.status_code == 401
     refresh_token = tokens["refresh_token"]
     assert isinstance(refresh_token, str)
     for _ in range(5):
         rt = refresh_token
         assert isinstance(rt, str)
-        resp = client.post(
-            "/api/v1/users/refresh-token",
-            cookies={"refresh_token": rt},
-        )
+        client.cookies.set("refresh_token", rt)
+        resp = client.post("/api/v1/users/refresh-token")
         assert resp.status_code in (200, 401)
         if resp.status_code == 200:
             new_rt = resp.cookies.get("refresh_token") or rt
@@ -354,10 +344,8 @@ def test_refresh_token_invalid(
     login_and_get_tokens: Callable[[], dict[str, Any]],
 ) -> None:
     login_and_get_tokens()  # ensure a user exists
-    resp = client.post(
-        "/api/v1/users/refresh-token",
-        cookies={"refresh_token": "invalidtoken"},
-    )
+    client.cookies.set("refresh_token", "invalidtoken")
+    resp = client.post("/api/v1/users/refresh-token")
     assert resp.status_code == 401
     body = resp.json()
     assert "invalid" in body["detail"].lower()
@@ -373,18 +361,13 @@ def test_refresh_token_revoked_usage(
     access_token = tokens["access_token"]
     refresh_token = tokens["refresh_token"]
     headers = {"Authorization": f"Bearer {access_token}"}
-    logout_resp = client.post(
-        "/api/v1/users/logout",
-        cookies={"refresh_token": refresh_token},
-        headers=headers,
-    )
+    client.cookies.set("refresh_token", refresh_token)
+    logout_resp = client.post("/api/v1/users/logout", headers=headers)
     # Use the latest refresh_token from logout response if set
     revoked_token = logout_resp.cookies.get("refresh_token", refresh_token)
     assert isinstance(revoked_token, str)
-    resp = client.post(
-        "/api/v1/users/refresh-token",
-        cookies={"refresh_token": revoked_token},
-    )
+    client.cookies.set("refresh_token", revoked_token)
+    resp = client.post("/api/v1/users/refresh-token")
     assert resp.status_code == 401
 
 
@@ -401,10 +384,8 @@ def test_refresh_token_sliding_expiration(
     assert isinstance(refresh_token, str)
     token_values = [refresh_token]
     for _ in range(3):
-        resp = client.post(
-            "/api/v1/users/refresh-token",
-            cookies={"refresh_token": refresh_token},
-        )
+        client.cookies.set("refresh_token", refresh_token)
+        resp = client.post("/api/v1/users/refresh-token")
         assert resp.status_code == 200
         # A new refresh token should be issued each time
         new_refresh = resp.cookies.get("refresh_token", refresh_token)
@@ -422,10 +403,8 @@ def test_refresh_sets_secure_refresh_cookie(
     tokens = login_and_get_tokens()
     rtok = tokens["refresh_token"]
     assert isinstance(rtok, str)
-    resp = client.post(
-        "/api/v1/users/refresh-token",
-        cookies={"refresh_token": rtok},
-    )
+    client.cookies.set("refresh_token", rtok)
+    resp = client.post("/api/v1/users/refresh-token")
     assert resp.status_code == 200
     set_cookie = resp.headers.get("set-cookie", "")
     assert_secure_refresh_cookie(set_cookie)
@@ -449,19 +428,15 @@ def test_refresh_token_rate_limiting(
     for _ in range(5):
         rt = refresh_token
         assert isinstance(rt, str)
-        resp = client.post(
-            "/api/v1/users/refresh-token",
-            cookies={"refresh_token": rt},
-        )
+        client.cookies.set("refresh_token", rt)
+        resp = client.post("/api/v1/users/refresh-token")
         assert resp.status_code == 200 or resp.status_code == 401
         if resp.status_code == 200:
             new_rt = resp.cookies.get("refresh_token") or rt
             assert isinstance(new_rt, str)
             refresh_token = new_rt
-    resp = client.post(
-        "/api/v1/users/refresh-token",
-        cookies={"refresh_token": refresh_token},
-    )
+    client.cookies.set("refresh_token", refresh_token)
+    resp = client.post("/api/v1/users/refresh-token")
     assert resp.status_code in (429, 401, 200)
 
 
@@ -487,10 +462,8 @@ def test_refresh_token_exception(
     monkeypatch.setattr(app.services.user_service, "rotate_refresh_token", raise_exc)
     rtok = cookies.get("refresh_token")
     assert isinstance(rtok, str)
-    resp = client.post(
-        "/api/v1/users/refresh-token",
-        cookies={"refresh_token": rtok},
-    )
+    client.cookies.set("refresh_token", rtok)
+    resp = client.post("/api/v1/users/refresh-token")
     assert resp.status_code == 401
     assert "invalid" in resp.json()["detail"].lower()
 
@@ -522,10 +495,8 @@ def test_refresh_token_generic_exception_returns_500(
     )
     rtok = cookies.get("refresh_token")
     assert isinstance(rtok, str)
-    resp = client.post(
-        "/api/v1/users/refresh-token",
-        cookies={"refresh_token": rtok},
-    )
+    client.cookies.set("refresh_token", rtok)
+    resp = client.post("/api/v1/users/refresh-token")
     assert resp.status_code == 500
 
 
@@ -573,11 +544,8 @@ def test_logout_empty_refresh_cookie(
 ) -> None:
     tokens = login_and_get_tokens()
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
-    resp = client.post(
-        "/api/v1/users/logout",
-        headers=headers,
-        cookies={"refresh_token": ""},
-    )
+    client.cookies.set("refresh_token", "")
+    resp = client.post("/api/v1/users/logout", headers=headers)
     assert resp.status_code == 204
     set_cookie = resp.headers.get("set-cookie", "")
     assert set_cookie
@@ -593,16 +561,11 @@ def test_logout_success(
     refresh = tokens["refresh_token"]
     assert isinstance(refresh, str)
     headers = {"Authorization": f"Bearer {access_token}"}
-    resp = client.post(
-        "/api/v1/users/logout",
-        headers=headers,
-        cookies={"refresh_token": refresh},
-    )
+    client.cookies.set("refresh_token", refresh)
+    resp = client.post("/api/v1/users/logout", headers=headers)
     assert resp.status_code == 204
-    resp2 = client.post(
-        "/api/v1/users/refresh-token",
-        cookies={"refresh_token": refresh},
-    )
+    client.cookies.set("refresh_token", refresh)
+    resp2 = client.post("/api/v1/users/refresh-token")
     assert resp2.status_code == 401
     tokens2 = login_and_get_tokens()
     access_token2 = tokens2["access_token"]
@@ -619,11 +582,8 @@ def test_logout_sets_deleted_refresh_cookie(
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
     rtok = tokens["refresh_token"]
     assert isinstance(rtok, str)
-    resp = client.post(
-        "/api/v1/users/logout",
-        headers=headers,
-        cookies={"refresh_token": rtok},
-    )
+    client.cookies.set("refresh_token", rtok)
+    resp = client.post("/api/v1/users/logout", headers=headers)
     assert resp.status_code == 204
     set_cookie = resp.headers.get("set-cookie", "")
     assert set_cookie
@@ -638,11 +598,8 @@ def test_logout_endpoint_invalid_token(
     tokens = login_and_get_tokens()
     auth_header = f"Bearer {tokens['access_token']}"
     headers = {"Authorization": auth_header}
-    resp = client.post(
-        "/api/v1/users/logout",
-        cookies={"refresh_token": "invalidtoken"},
-        headers=headers,
-    )
+    client.cookies.set("refresh_token", "invalidtoken")
+    resp = client.post("/api/v1/users/logout", headers=headers)
     assert resp.status_code == 204
     set_cookie = resp.headers.get("set-cookie", "")
     assert set_cookie
@@ -690,11 +647,8 @@ def test_logout_endpoint_valid_token_repo_revoked(
     try:
         rtok = tokens["refresh_token"]
         assert isinstance(rtok, str)
-        resp = client.post(
-            "/api/v1/users/logout",
-            cookies={"refresh_token": rtok},
-            headers=headers,
-        )
+        client.cookies.set("refresh_token", rtok)
+        resp = client.post("/api/v1/users/logout", headers=headers)
         assert resp.status_code == 204
         assert called["token"] == rtok
     finally:
@@ -718,11 +672,8 @@ def test_logout_exception_returns_401(
     monkeypatch.setattr(app.services.user_service, "logout_single_session", boom)
     rtok = tokens["refresh_token"]
     assert isinstance(rtok, str)
-    resp = client.post(
-        "/api/v1/users/logout",
-        headers=headers,
-        cookies={"refresh_token": rtok},
-    )
+    client.cookies.set("refresh_token", rtok)
+    resp = client.post("/api/v1/users/logout", headers=headers)
     assert resp.status_code == 204
 
 
@@ -744,11 +695,8 @@ def test_logout_domain_logout_error_returns_204(
     monkeypatch.setattr(app.services.user_service, "logout_single_session", boom)
     rtok = tokens["refresh_token"]
     assert isinstance(rtok, str)
-    resp = client.post(
-        "/api/v1/users/logout",
-        headers=headers,
-        cookies={"refresh_token": rtok},
-    )
+    client.cookies.set("refresh_token", rtok)
+    resp = client.post("/api/v1/users/logout", headers=headers)
     assert resp.status_code == 204
 
 
@@ -782,11 +730,8 @@ def test_logout_cookie_belongs_to_other_user(
     token_b = login_b.json()["access_token"]
     headers_b = {"Authorization": f"Bearer {token_b}"}
     # B tries to logout using A's cookie -> 401
-    resp = client.post(
-        "/api/v1/users/logout",
-        headers=headers_b,
-        cookies={"refresh_token": cookie_a},
-    )
+    client.cookies.set("refresh_token", cookie_a)
+    resp = client.post("/api/v1/users/logout", headers=headers_b)
     assert resp.status_code == 204
 
 
@@ -801,10 +746,8 @@ def test_refresh_access_token_claims_sub(
     )
     rtok = login.cookies.get("refresh_token")
     assert isinstance(rtok, str)
-    resp = client.post(
-        "/api/v1/users/refresh-token",
-        cookies={"refresh_token": rtok},
-    )
+    client.cookies.set("refresh_token", rtok)
+    resp = client.post("/api/v1/users/refresh-token")
     assert resp.status_code == 200
     token = resp.json()["access_token"]
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
