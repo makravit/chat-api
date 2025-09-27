@@ -23,11 +23,12 @@ for _, module_name, _ in pkgutil.iter_modules(package.__path__):
 # within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
-fileConfig(config.config_file_name)
+# Interpret the config file for Python logging (guard for None per Pyright).
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
 
 # Set SQLAlchemy URL from settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.database_url)
 
 target_metadata = Base.metadata
 
@@ -44,8 +45,9 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    config_section = config.get_section(config.config_ini_section) or {}
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
+        config_section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

@@ -5,7 +5,7 @@ import pytest
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.orm import Session, sessionmaker
 from testcontainers.postgres import PostgresContainer
 
@@ -31,8 +31,16 @@ def postgres_container() -> Generator[PostgresContainer]:
 @pytest.fixture(scope="session")
 def test_engine(postgres_container: PostgresContainer) -> Generator[Engine]:
     db_url = postgres_container.get_connection_url()
-    # Patch DATABASE_URL for Alembic and app using settings object
-    settings.DATABASE_URL = db_url
+    # Patch database component settings for Alembic and app
+    url = make_url(db_url)
+    settings.DATABASE_HOST = url.host or "localhost"
+    if url.port is not None:
+        settings.DATABASE_PORT = int(url.port)
+    if url.username is not None:
+        settings.DATABASE_USER = str(url.username)
+    if url.password is not None:
+        settings.DATABASE_PASSWORD = str(url.password)
+    settings.DATABASE_NAME = str(url.database)
     # Run Alembic migrations
     alembic_cfg = Config("alembic.ini")
     alembic_cfg.set_main_option("sqlalchemy.url", db_url)

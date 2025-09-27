@@ -14,7 +14,7 @@ from app.core.config import settings
 
 def get_engine() -> "Engine":
     """Create and return a SQLAlchemy Engine bound to the configured URL."""
-    return create_engine(settings.DATABASE_URL)
+    return create_engine(settings.database_url)
 
 
 def get_session_local() -> sessionmaker[Session]:

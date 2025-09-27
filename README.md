@@ -191,9 +191,13 @@ Use this when you want to develop without Docker:
   ```sh
   poetry install
   ```
-2. Ensure your local `.env` has a host connection string (localhost):
+2. Ensure your local `.env` has local database settings (localhost):
   ```env
-  DATABASE_URL=postgresql://chatbot:chatbotpass@localhost:5432/chatbotdb
+  DATABASE_HOST=localhost
+  DATABASE_PORT=5432
+  DATABASE_USER=chatbot
+  DATABASE_PASSWORD=chatbotpass
+  DATABASE_NAME=chatbotdb
   ```
 3. Run the app with auto-reload:
   ```sh

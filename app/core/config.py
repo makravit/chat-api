@@ -1,5 +1,7 @@
 """App configuration settings."""
 
+from __future__ import annotations
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,7 +12,14 @@ class Settings(BaseSettings):
     `model_config` for the location of the .env file.
     """
 
-    DATABASE_URL: str = "postgresql://chatbot:chatbotpass@db:5432/chatbotdb"
+    # Database connection (component variables)
+    # Defaults are suitable for Docker Compose. Override in local dev via .env.
+    DATABASE_HOST: str = "db"
+    DATABASE_PORT: int = 5432
+    DATABASE_USER: str = "chatbot"
+    DATABASE_PASSWORD: str = "chatbotpass"
+    DATABASE_NAME: str = "chatbotdb"
+
     SECRET_KEY: str = "secret-key"
     LOG_LEVEL: str = "INFO"  # Configurable log level, e.g., DEBUG, INFO, WARNING, ERROR
     METRICS_USER: str = "metrics"
@@ -23,6 +32,20 @@ class Settings(BaseSettings):
     ARGON2_PARALLELISM: int = 2
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @property
+    def database_url(self) -> str:
+        """Assemble and return the SQLAlchemy database URL for PostgreSQL.
+
+        The URL is constructed from the component variables so that callers
+        don't need to repeat the assembly logic across the codebase.
+        """
+        user = self.DATABASE_USER
+        pwd = self.DATABASE_PASSWORD
+        host = self.DATABASE_HOST
+        port = self.DATABASE_PORT
+        name = self.DATABASE_NAME
+        return f"postgresql://{user}:{pwd}@{host}:{port}/{name}"
 
 
 settings = Settings()
